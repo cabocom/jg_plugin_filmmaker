@@ -1,0 +1,23 @@
+# Entornos virtuales
+.venv/
+env/
+venv/
+
+# Secretos y entorno local
+.env
+.env.local
+
+# Bytecode y caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Distribución y empaquetado
+dist/
+build/
+*.egg-info/
+.DS_Store

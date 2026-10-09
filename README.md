@@ -1,0 +1,35 @@
+# jg_plugin_filmmaker
+
+**jg_plugin_filmmaker** es un plugin canónico de extensión satélite para el agente cognitivo `jg_agente`, desarrollado bajo la arquitectura modular del ecosistema `javiergalvez-ia`.
+
+Proporciona herramientas de asistencia dramática y preproducción cinematográfica:
+1. **`treatment_structuring`**: Normalización de ideas y notas libres a tratamiento en presente indicativo, respetando candados y términos fijados del autor (`user_locks`).
+2. **`screenplay_formatter`**: Transformación de tratamiento a formato canónico de guión literario (Fountain) preservando mayúsculas, diálogos y acotaciones.
+3. **`shot_breakdown_detector`**: Detección y propuesta de planos técnicos de rodaje empleando estrictamente la sintaxis canónica:
+   `--- shot N (tipo) ---` (ej: `--- shot 1 (PG) ---`, `--- shot 2 (PM) ---`, `--- shot 3 (PP) ---`).
+
+---
+
+## Desacoplamiento y Contratos
+
+- **SDK Canónico:** Utiliza exclusivamente contratos de `jg_sdk.contracts` (`AgentTool`, `BasePlugin`, `PluginMetadata`, `RiskLevel`, `ToolResult`, `ToolType`).
+- **Cero dependencias internas:** No importa nada de `jg_agente.app.*`.
+- **Nivel de Riesgo:** `RiskLevel.LOW` (herramientas de lectura/transformación sin efectos secundarios no reversibles).
+
+---
+
+## Instalación y Pruebas
+
+```bash
+# 1. Configurar entorno y dependencias (.venv + SDK)
+bash install.sh
+
+# 2. Ejecutar suite de pruebas con pytest
+./.venv/bin/pytest
+
+# 3. Validar con linter Ruff
+./.venv/bin/ruff check .
+
+# 4. Vincular a jg_agente en desarrollo
+jg link jg_plugin_filmmaker -t jg_agente/plugins
+```
