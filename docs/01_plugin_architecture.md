@@ -57,7 +57,11 @@ class FilmmakerPlugin(BasePlugin):
             version="1.0.0",
             description="Plugin cognitivo de asistencia y desglose cinematográfico",
             author="Javier Gálvez",
-            capabilities=["treatment_structuring", "screenplay_formatter", "shot_breakdown_detector"],
+            capabilities=[
+                "treatment_structuring",
+                "screenplay_formatter",
+                "shot_breakdown_detector",
+            ],
         )
 
     async def get_tools(self) -> list[AgentTool]:

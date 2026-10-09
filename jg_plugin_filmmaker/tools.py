@@ -84,6 +84,7 @@ def execute_treatment_structuring(
     characters_context: list[dict[str, Any]] | None = None,
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
 ) -> ToolResult:
     """Ejecuta la estructuración del tratamiento respetando los candados del usuario."""
     try:
@@ -92,6 +93,7 @@ def execute_treatment_structuring(
             characters_context=characters_context,
             location_context=location_context,
             user_locks=user_locks,
+            llm_client=llm_client,
         )
 
         applied_locks_count = 0
@@ -121,6 +123,7 @@ def execute_screenplay_formatter(
     characters_context: list[dict[str, Any]] | None = None,
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
 ) -> ToolResult:
     """Ejecuta la conversión a guión literario Fountain respetando user_locks."""
     try:
@@ -129,6 +132,7 @@ def execute_screenplay_formatter(
             characters_context=characters_context,
             location_context=location_context,
             user_locks=user_locks,
+            llm_client=llm_client,
         )
 
         return ToolResult(
@@ -149,10 +153,14 @@ def execute_screenplay_formatter(
 
 def execute_shot_breakdown_detector(
     screenplay_text: str,
+    llm_client: Any = None,
 ) -> ToolResult:
     """Ejecuta la propuesta de planos técnicos con el delimitador canónico '--- shot N (tipo) ---'."""
     try:
-        annotated_text, shots_list = breakdown_screenplay_to_shots(screenplay_text)
+        annotated_text, shots_list = breakdown_screenplay_to_shots(
+            screenplay_text=screenplay_text,
+            llm_client=llm_client,
+        )
 
         return ToolResult(
             success=True,

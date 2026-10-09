@@ -19,9 +19,13 @@ El plugin implementa tres herramientas canónicas validadas con **Pydantic v2**:
   ```python
   class TreatmentInput(BaseModel):
       raw_text: str = Field(..., description="Texto bruto del autor")
-      characters_context: list[str] = Field(default_factory=list, description="Lista de nombres de personajes")
+      characters_context: list[str] = Field(
+          default_factory=list, description="Lista de nombres de personajes"
+      )
       location_context: str | None = Field(default=None, description="Localización de la escena")
-      user_locks: dict[str, Any] = Field(default_factory=dict, description="Candados y términos fijados")
+      user_locks: dict[str, Any] = Field(
+          default_factory=dict, description="Candados y términos fijados"
+      )
   ```
 - **Salida:** `ToolResult(success=True, data={"structured_text": ...})`.
 
@@ -36,9 +40,13 @@ El plugin implementa tres herramientas canónicas validadas con **Pydantic v2**:
   ```python
   class ScreenplayInput(BaseModel):
       structured_text: str = Field(..., description="Texto de tratamiento")
-      characters_context: list[str] = Field(default_factory=list, description="Personajes para formateo de diálogos")
+      characters_context: list[str] = Field(
+          default_factory=list, description="Personajes para formateo de diálogos"
+      )
       location_context: str | None = Field(default=None, description="Localización para el slugline")
-      user_locks: dict[str, Any] = Field(default_factory=dict, description="Candados y términos fijados")
+      user_locks: dict[str, Any] = Field(
+          default_factory=dict, description="Candados y términos fijados"
+      )
   ```
 - **Salida:** `ToolResult(success=True, data={"screenplay_text": ...})`.
 
@@ -66,9 +74,9 @@ El plugin implementa tres herramientas canónicas validadas con **Pydantic v2**:
       data={
           "shots": [
               {"shot_number": 1, "shot_type": "PG", "description": "..."},
-              {"shot_number": 2, "shot_type": "PM", "description": "..."}
+              {"shot_number": 2, "shot_type": "PM", "description": "..."},
           ],
-          "annotated_text": "..."
-      }
+          "annotated_text": "...",
+      },
   )
   ```

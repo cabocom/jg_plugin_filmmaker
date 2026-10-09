@@ -212,3 +212,106 @@ async def test_plugin_lifecycle_and_health():
 
     await plugin.shutdown()
     assert plugin._is_started is False
+
+
+def test_llm_inference_treatment_structuring_with_mock_llm():
+    """Valida la inferencia con LLM inyectado para estructuración respetando user_locks."""
+
+    class DummyChatModel:
+        def __init__(self, answer: str):
+            self.answer = answer
+            self.last_messages = None
+
+        def invoke(self, messages):
+            self.last_messages = messages
+
+            class DummyResponse:
+                content = self.answer
+
+            return DummyResponse()
+
+    mock_llm = DummyChatModel(
+        answer="En BAR CENTRAL (INT): Javier observa la ventana mientras Javi siente el frío exterior."
+    )
+    user_locks = {
+        "pinned_terms": {
+            "Javi": "Javier",
+        }
+    }
+
+    result = execute_treatment_structuring(
+        raw_text="Javier mira afuera con frío.",
+        user_locks=user_locks,
+        llm_client=mock_llm,
+    )
+
+    assert result.success is True
+    # Comprobar que el LLM fue invocado y luego se aplicó el reemplazo de 'Javi' -> 'Javier'
+    assert "Javier siente el frío" in result.output
+    assert "Javi siente" not in result.output
+    assert mock_llm.last_messages is not None
+
+
+def test_llm_inference_screenplay_formatter_resolves_indirect_dialogue():
+    """Valida que el LLM inyectado formatea diálogos y resuelve estilo indirecto."""
+
+    class DummyChatModel:
+        def invoke(self, messages):
+            class DummyResponse:
+                content = (
+                    "INT. BAR CENTRAL - NOCHE 1\n\n"
+                    "JAVIER\n"
+                    "(con miedo)\n"
+                    "Ya están llegando.\n\n"
+                    "JUAN\n"
+                    "¿Quién está llegando?"
+                )
+
+            return DummyResponse()
+
+    mock_llm = DummyChatModel()
+    result = execute_screenplay_formatter(
+        structured_text="Javier mira a Juan con miedo y le dice que ya están llegando. Juan le pregunta quién.",
+        llm_client=mock_llm,
+    )
+
+    assert result.success is True
+    assert "INT. BAR CENTRAL - NOCHE 1" in result.output
+    assert "JAVIER\n(con miedo)\nYa están llegando." in result.output
+    assert "JUAN\n¿Quién está llegando?" in result.output
+
+
+def test_llm_inference_shot_breakdown_parses_canonical_delimiters():
+    """Valida que el desglose con LLM parsea delimitadores canónicos '--- shot N (tipo) ---'."""
+
+    class DummyChatModel:
+        def invoke(self, messages):
+            class DummyResponse:
+                content = (
+                    "--- shot 1 (PG) ---\n"
+                    "INT. BAR CENTRAL - NOCHE 1\n"
+                    "Javier está sentado en una esquina solitaria.\n\n"
+                    "--- shot 2 (PP) ---\n"
+                    "Primer plano de los ojos asustados de Javier.\n\n"
+                    "--- shot 3 (PD) ---\n"
+                    "Detalle de las manos temblando sobre la mesa."
+                )
+
+            return DummyResponse()
+
+    mock_llm = DummyChatModel()
+    result = execute_shot_breakdown_detector(
+        screenplay_text="Guión de prueba",
+        llm_client=mock_llm,
+    )
+
+    assert result.success is True
+    assert "--- shot 1 (PG) ---" in result.output
+    assert "--- shot 2 (PP) ---" in result.output
+    assert "--- shot 3 (PD) ---" in result.output
+
+    shots = result.metadata["shots"]
+    assert len(shots) == 3
+    assert shots[0]["shot_type"] == "PG"
+    assert shots[1]["shot_type"] == "PP"
+    assert shots[2]["shot_type"] == "PD"

@@ -3,10 +3,31 @@
 Transforma ideas libres y texto bruto en tratamiento cinematográfico estructurado
 en presente de indicativo, integrando el contexto de la biblia y respetando
 estrictamente los bloqueos manuales del usuario (user_locks).
+Soporta inferencia semántica con LLM o fallback determinista para testing y CI.
 """
 
 import re
 from typing import Any
+
+from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
+
+STRUCTURING_SYSTEM_PROMPT = """Eres un consultor y analista cinematográfico profesional.
+Tu misión es transformar notas dispersas, ideas en bruto o borradores de un autor en un TRATAMIENTO CINEMATOGRÁFICO NARRATIVO formal.
+
+DIRECTRICES Y REGLAS ESTRICTAS:
+1. TIEMPO VERBAL: Redacta exclusivamente en tiempo PRESENTE DE INDICATIVO continuo (ej: "Javier camina", "el viento golpea la ventana", nunca en pretérito ni futuro).
+2. ACCIONES OBSERVABLES: Describe acciones físicas visibles, dinámicas espaciales y tensión dramática sin juicios de valor abstractos.
+3. CONTEXTO DE PERSONAJES:
+{characters_context}
+Si alguno de estos personajes interviene en la escena, integra su nombre exacto.
+4. CONTEXTO DE LOCALIZACIÓN:
+{location_context}
+Ubica espacialmente la escena en este entorno.
+5. CANDADOS Y TÉRMINOS FIJADOS (REGLA INMUTABLE):
+{pinned_terms_context}
+Respeta escrupulosamente los términos canónicos anteriores.
+6. FORMATO DE SALIDA: Devuelve ÚNICAMENTE el texto del tratamiento en párrafos limpios, sin saludos, introducciones, conclusiones ni metacomentarios.
+"""
 
 
 def apply_user_locks(
@@ -53,6 +74,7 @@ def structure_treatment(
     characters_context: list[dict[str, Any]] | None = None,
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
 ) -> str:
     """Normaliza texto bruto a tratamiento dramático en presente continuo/indicativo."""
     if not raw_text or not raw_text.strip():
@@ -60,7 +82,45 @@ def structure_treatment(
 
     text = raw_text.strip()
 
-    # Normalizar contexto de localización
+    # Intentar inferencia semántica con LLM si está disponible y activo
+    active_llm = get_active_llm(llm_client)
+    if active_llm is not None:
+        chars_desc = "Sin personajes específicos definidos."
+        if characters_context and isinstance(characters_context, list):
+            chars_desc = "\n".join(
+                f"- {c.get('name', '')}: {c.get('bio', '')} (Rol: {c.get('role', 'personaje')})"
+                for c in characters_context
+                if isinstance(c, dict) and "name" in c
+            )
+
+        loc_desc = "Sin localización específica."
+        if location_context and isinstance(location_context, dict):
+            lname = location_context.get("name", "ESCENARIO")
+            ltype = location_context.get("type", "INT")
+            loc_desc = f"{lname} ({ltype})"
+
+        locks_desc = "Ningún término fijado."
+        if user_locks and isinstance(user_locks, dict):
+            pinned = user_locks.get("pinned_terms", {})
+            if pinned:
+                locks_desc = "\n".join(
+                    f"- Sustituir '{k}' siempre por '{v}'" for k, v in pinned.items()
+                )
+
+        sys_prompt = STRUCTURING_SYSTEM_PROMPT.format(
+            characters_context=chars_desc,
+            location_context=loc_desc,
+            pinned_terms_context=locks_desc,
+        )
+
+        user_prompt = f"NOTAS / TEXTO BRUTO DEL AUTOR:\n{text}"
+
+        llm_output = invoke_llm_text(active_llm, sys_prompt, user_prompt)
+        if llm_output and llm_output.strip():
+            # Aplicar estrictamente candados de usuario sobre la salida del LLM
+            return apply_user_locks(llm_output.strip(), user_locks, stage="structured")
+
+    # --- FALLBACK DETERMINISTA HEURÍSTICO (Modo Test / Offline / Cero Tokens) ---
     location_prefix = ""
     if location_context and isinstance(location_context, dict):
         loc_name = location_context.get("name", "").strip()
@@ -72,15 +132,12 @@ def structure_treatment(
                 details += f" bajo {lighting.lower()}"
             location_prefix = f"En {loc_name}{details}: "
 
-    # Dividir párrafos y transformar oraciones a presente indicativo
     paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
     structured_paragraphs: list[str] = []
 
     for i, p in enumerate(paragraphs):
-        # Limpieza básica
         p_clean = re.sub(r"\s+", " ", p)
 
-        # Si hay contexto de personajes, normalizar nombres si es relevante
         if characters_context and isinstance(characters_context, list):
             for char in characters_context:
                 if isinstance(char, dict) and "name" in char:
@@ -94,8 +151,4 @@ def structure_treatment(
         structured_paragraphs.append(p_clean)
 
     structured_text = "\n\n".join(structured_paragraphs)
-
-    # Aplicar estrictamente los candados y términos fijados del usuario
-    final_text = apply_user_locks(structured_text, user_locks, stage="structured")
-
-    return final_text
+    return apply_user_locks(structured_text, user_locks, stage="structured")
