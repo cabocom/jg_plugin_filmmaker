@@ -52,7 +52,8 @@ def test_treatment_structuring_basic_and_context():
 
     assert isinstance(result, ToolResult)
     assert result.success is True
-    assert "BAR CENTRAL" in result.output
+    assert "entra en el bar buscando respuestas" in result.output
+    assert not result.output.startswith("En ")
     assert result.metadata["stage"] == "structured"
 
 

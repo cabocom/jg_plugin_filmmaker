@@ -22,11 +22,13 @@ DIRECTRICES Y REGLAS ESTRICTAS:
 Si alguno de estos personajes interviene en la escena, integra su nombre exacto.
 4. CONTEXTO DE LOCALIZACIÓN:
 {location_context}
-Ubica espacialmente la escena en este entorno.
+Integra la atmósfera de este entorno dentro de la narración, pero NUNCA antepongas un encabezado o prefijo como 'En LOCALIZACIÓN: ' ni sluglines de guion.
 5. CANDADOS Y TÉRMINOS FIJADOS (REGLA INMUTABLE):
 {pinned_terms_context}
 Respeta escrupulosamente los términos canónicos anteriores.
-6. FORMATO DE SALIDA: Devuelve ÚNICAMENTE el texto del tratamiento en párrafos limpios, sin saludos, introducciones, conclusiones ni metacomentarios.
+6. PROHIBICIONES Y FORMATO DE SALIDA:
+- NO incluyas encabezados de escena (sluglines como 'INT. BAR - DIA'), ni títulos, ni prefijos como 'En BAR CENTRAL:', ni metadatos.
+- Devuelve ÚNICAMENTE la prosa narrativa dramática en párrafos limpios, sin preámbulos ni conclusiones.
 """
 
 
@@ -117,26 +119,19 @@ def structure_treatment(
 
         llm_output = invoke_llm_text(active_llm, sys_prompt, user_prompt)
         if llm_output and llm_output.strip():
+            # Limpiar cualquier posible residuo de prefijo accidental
+            clean_output = re.sub(r"^En [^:]+:\s*", "", llm_output.strip(), flags=re.IGNORECASE)
             # Aplicar estrictamente candados de usuario sobre la salida del LLM
-            return apply_user_locks(llm_output.strip(), user_locks, stage="structured")
+            return apply_user_locks(clean_output, user_locks, stage="structured")
 
     # --- FALLBACK DETERMINISTA HEURÍSTICO (Modo Test / Offline / Cero Tokens) ---
-    location_prefix = ""
-    if location_context and isinstance(location_context, dict):
-        loc_name = location_context.get("name", "").strip()
-        loc_type = location_context.get("type", "").strip()
-        lighting = location_context.get("lighting_notes", "").strip()
-        if loc_name:
-            details = f" ({loc_type})" if loc_type else ""
-            if lighting:
-                details += f" bajo {lighting.lower()}"
-            location_prefix = f"En {loc_name}{details}: "
-
     paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
     structured_paragraphs: list[str] = []
 
-    for i, p in enumerate(paragraphs):
-        p_clean = re.sub(r"\s+", " ", p)
+    for p in paragraphs:
+        # Purgar cualquier residuo de 'En LOCALIZACIÓN:' que venga arrastrado
+        p_clean = re.sub(r"^En [^:]+:\s*", "", p, flags=re.IGNORECASE).strip()
+        p_clean = re.sub(r"\s+", " ", p_clean)
 
         if characters_context and isinstance(characters_context, list):
             for char in characters_context:
@@ -145,10 +140,8 @@ def structure_treatment(
                     pattern = rf"\b{re.escape(cname)}\b"
                     p_clean = re.sub(pattern, cname, p_clean, flags=re.IGNORECASE)
 
-        if i == 0 and location_prefix and not p_clean.startswith("En "):
-            p_clean = f"{location_prefix}{p_clean}"
-
-        structured_paragraphs.append(p_clean)
+        if p_clean:
+            structured_paragraphs.append(p_clean)
 
     structured_text = "\n\n".join(structured_paragraphs)
     return apply_user_locks(structured_text, user_locks, stage="structured")
