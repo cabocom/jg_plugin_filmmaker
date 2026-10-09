@@ -44,7 +44,7 @@ def format_screenplay(
         screenplay_blocks.append(slugline)
 
     dialogue_pattern = re.compile(
-        r'^(?P<speaker>[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+?):\s*(?:(?:\((?P<parenthetical>[^\)]+)\)\s*)?)(?P<dialogue>.+)$'
+        r"^(?P<speaker>[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+?):\s*(?:(?:\((?P<parenthetical>[^\)]+)\)\s*)?)(?P<dialogue>.+)$"
     )
 
     quote_pattern = re.compile(

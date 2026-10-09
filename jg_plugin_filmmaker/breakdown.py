@@ -13,15 +13,55 @@ def detect_shot_type(action_text: str) -> str:
     lower = action_text.lower()
 
     # Plano Detalle (PD) para objetos o miradas microscópicas
-    if any(k in lower for k in ["vaso", "llave", "carta", "ojo", "mano", "pantalla", "teléfono", "reloj", "pistola", "detalle"]):
+    if any(
+        k in lower
+        for k in [
+            "vaso",
+            "llave",
+            "carta",
+            "ojo",
+            "mano",
+            "pantalla",
+            "teléfono",
+            "reloj",
+            "pistola",
+            "detalle",
+        ]
+    ):
         return "PD"
 
     # Primer Plano (PP) para emociones, miradas y reacciones directas
-    if any(k in lower for k in ["mira fijamente", "rostro", "lágrima", "expresión", "susurra", "ojos", "sonríe", "palidece"]):
+    if any(
+        k in lower
+        for k in [
+            "mira fijamente",
+            "rostro",
+            "lágrima",
+            "expresión",
+            "susurra",
+            "ojos",
+            "sonríe",
+            "palidece",
+        ]
+    ):
         return "PP"
 
     # Plano General (PG) para aperturas, localizaciones completas y multitudes
-    if any(k in lower for k in ["int.", "ext.", "entra al", "sala", "bar", "calle", "habitación", "paisaje", "panorama", "edificio"]):
+    if any(
+        k in lower
+        for k in [
+            "int.",
+            "ext.",
+            "entra al",
+            "sala",
+            "bar",
+            "calle",
+            "habitación",
+            "paisaje",
+            "panorama",
+            "edificio",
+        ]
+    ):
         return "PG"
 
     # Plano Americano (PA) para posturas de cuerpo entero o acción corporal
@@ -59,11 +99,13 @@ def breakdown_screenplay_to_shots(screenplay_text: str) -> tuple[str, list[dict[
         output_lines.append(header)
         output_lines.append(p)
 
-        shots.append({
-            "shot_number": shot_count,
-            "shot_type": shot_type,
-            "description": p,
-        })
+        shots.append(
+            {
+                "shot_number": shot_count,
+                "shot_type": shot_type,
+                "description": p,
+            }
+        )
 
     # Si no se generó ningún plano (ej: solo encabezado), crear al menos 1
     if not shots and paragraphs:
@@ -71,11 +113,13 @@ def breakdown_screenplay_to_shots(screenplay_text: str) -> tuple[str, list[dict[
         header = "--- shot 1 (PG) ---"
         desc = " ".join(paragraphs)
         output_lines = [header, desc]
-        shots.append({
-            "shot_number": 1,
-            "shot_type": "PG",
-            "description": desc,
-        })
+        shots.append(
+            {
+                "shot_number": 1,
+                "shot_type": "PG",
+                "description": desc,
+            }
+        )
 
     annotated_output = "\n\n".join(output_lines)
 

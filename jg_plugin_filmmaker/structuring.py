@@ -9,7 +9,9 @@ import re
 from typing import Any
 
 
-def apply_user_locks(text: str, user_locks: dict[str, Any] | None, stage: str = "structured") -> str:
+def apply_user_locks(
+    text: str, user_locks: dict[str, Any] | None, stage: str = "structured"
+) -> str:
     """Aplica y preserva sustituciones y términos fijados en user_locks.
 
     Soporta:
