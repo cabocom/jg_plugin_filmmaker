@@ -37,7 +37,16 @@ Esto genera un enlace simbólico en `jg_agente/plugins/jg_plugin_filmmaker`, per
 
 ---
 
-## 4. Integración en `scripts/check.sh`
+## 4. Pipeline GitLab CI/CD (`.gitlab-ci.yml`)
+
+El plugin implementa un pipeline estándar sin ofuscación con tres etapas:
+1. **Stage `lint` (`lint:ruff`):** Análisis estático y verificación de formato con Ruff.
+2. **Stage `test` (`test:pytest`):** Ejecución de la suite completa de 13 tests unitarios en entorno aislado `python:3.12-slim`.
+3. **Stage `build` (`build:package`):** Compilación limpia de artefactos wheel y sdist mediante `python -m build`, persistiendo los paquetes en `dist/`.
+
+---
+
+## 5. Integración en `scripts/check.sh`
 
 El plugin está plenamente integrado en el pipeline CI/CD unificado del ecosistema:
 - **Stage 1 (Lint):** `ruff check .`
