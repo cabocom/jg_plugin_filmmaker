@@ -37,6 +37,57 @@ DIRECTRICES Y REGLAS ESTRICTAS:
 """
 
 
+def refine_dialogue_to_direct_speech(text: str, verb: str) -> str:
+    """Nodo de refinamiento dramático: convierte tercera persona narrativa a segunda/primera persona directa."""
+    res = text.strip()
+    res = re.sub(r"^que\s+", "", res, flags=re.IGNORECASE)
+
+    # Iteración 1: Pronombres y reflexivos a interlocución directa
+    replacements = [
+        (r"\bse\s+ha\s+comportado\b", "te has comportado"),
+        (r"\bse\s+ha\s+portado\b", "te has portado"),
+        (r"\bse\s+comportó\b", "te comportaste"),
+        (r"\bvolverse\s+con\s+él\b", "volverte conmigo"),
+        (r"\birse\s+con\s+él\b", "irte conmigo"),
+        (r"\bvenirse\s+con\s+él\b", "venirte conmigo"),
+        (r"\bcon\s+él\b", "conmigo"),
+        (r"\bcon\s+ella\b", "conmigo"),
+        (r"\btiene\s+que\b", "tienes que"),
+        (r"\bdebe\b", "debes"),
+        (r"\bsu\s+castigo\b", "tu castigo"),
+        (r"\bsu\s+culpa\b", "tu culpa"),
+        (r"\bpara\s+recibir\s+su\b", "para recibir tu"),
+    ]
+
+    for pat, rep in replacements:
+        res = re.sub(pat, rep, res, flags=re.IGNORECASE)
+
+    # Iteración 2: Segmentar oraciones compuestas
+    res = re.sub(r"\s+y\s+que\s+", ". ", res, flags=re.IGNORECASE)
+    res = re.sub(r"\s+y\s+(tienes|debes|ahora|no|vas)\b", r". \1", res, flags=re.IGNORECASE)
+
+    # Iteración 3: Mayúsculas y signos
+    if "pregunta" in verb:
+        m_q = re.match(r"^(?:quien|quién)\s+(.+)$", res, re.IGNORECASE)
+        if m_q:
+            return f"¿Quién {m_q.group(1)}?"
+        elif re.match(r"^(?:está|esta|llega|vienen|es|pasa)\b", res, re.IGNORECASE):
+            return f"¿Quién {res}?"
+        return f"¿{res.strip('.?!')[0].upper() + res.strip('.?!')[1:]}?"
+
+    if "grita" in verb:
+        return f"¡{res.strip('.?!')[0].upper() + res.strip('.?!')[1:]}!"
+
+    sentences = [s.strip() for s in re.split(r"(?<=[.?!])\s+", res) if s.strip()]
+    formatted = []
+    for s in sentences:
+        if s:
+            formatted.append(s[0].upper() + s[1:])
+
+    clean_out = " ".join(formatted) if formatted else res
+    return clean_out.rstrip(".?!") + "."
+
+
 def format_screenplay(
     structured_text: str,
     characters_context: list[dict[str, Any]] | None = None,
@@ -230,21 +281,8 @@ def format_screenplay(
             # Limpiar nexos anidados 'y que '
             dialogue_rest = re.sub(r"\s+y\s+que\s+", " y ", dialogue_rest, flags=re.IGNORECASE)
 
-            # Formatear diálogo
-            if "pregunta" in verb:
-                m_q = re.match(r"^(?:quien|quién)\s+(.+)$", dialogue_rest, re.IGNORECASE)
-                if m_q:
-                    dialogue = f"¿Quién {m_q.group(1)}?"
-                elif re.match(
-                    r"^(?:está|esta|llega|vienen|es|pasa)\b", dialogue_rest, re.IGNORECASE
-                ):
-                    dialogue = f"¿Quién {dialogue_rest}?"
-                else:
-                    dialogue = f"¿{dialogue_rest[0].upper() + dialogue_rest[1:]}?"
-            elif "grita" in verb:
-                dialogue = f"¡{dialogue_rest[0].upper() + dialogue_rest[1:]}!"
-            else:
-                dialogue = f"{dialogue_rest[0].upper() + dialogue_rest[1:]}."
+            # Iteración y refinamiento dramático a estilo directo (segunda persona)
+            dialogue = refine_dialogue_to_direct_speech(dialogue_rest, verb)
 
             if action_part:
                 action_clean = re.sub(r"[.?!]+$", "", action_part) + "."

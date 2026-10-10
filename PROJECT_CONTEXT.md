@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.1.0  
+**Versión:** 2.2.0  
 **Fecha:** 10 de octubre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Pytest, Ruff  
-**Estado:** Totalmente implementado, inferencia semántica LLM y degradación mock determinista verificado con 13 tests unitarios (100% pasando en CI/CD).
+**Estado:** Totalmente implementado, inferencia semántica LLM, refinamiento iterativo de habla indirecta a estilo directo teatral canónico y degradación mock determinista verificado con 13 tests unitarios (100% pasando en CI/CD).
 
 ---
 
