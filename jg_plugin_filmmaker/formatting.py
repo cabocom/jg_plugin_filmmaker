@@ -102,6 +102,41 @@ def format_screenplay(
         re.IGNORECASE,
     )
 
+    verbs = (
+        r"(?:dice|dijo|decir|pregunta|preguntó|preguntar|responde|respondió|responder|"
+        r"contesta|contestó|contestar|susurra|susurró|susurrar|grita|gritó|gritar|"
+        r"afirma|afirmó|afirmar|exclama|exclamó|exclamar|pide|pidió|pedir|murmura|murmuró|advierte|advirtió)"
+    )
+    links = (
+        r"(?:que\s+quien|qué\s+quien|que\s+quién|qué\s+quién|que\s+qué|qué\s+qué|"
+        r"que\s+cómo|qué\s+cómo|que\s+dónde|qué\s+dónde|que\s+cuándo|qué\s+cuándo|"
+        r"que\s+por\s+qué|que\s+si|qué\s+|que\s+|si\s+|quién\s+|quien\s+|cómo\s+|dónde\s+|cuándo\s+|por\s+qué\s+)"
+    )
+    indirect_pattern = re.compile(
+        rf"^(.*?)(?:[,\s]+y\s+|\s+y\s+)?(?:(se|le|les|me|nos|te)\s+)?{verbs}\s+(.*?)\s*{links}(.+)$",
+        re.IGNORECASE,
+    )
+    ignore_words = {
+        "se",
+        "el",
+        "la",
+        "los",
+        "las",
+        "un",
+        "una",
+        "al",
+        "en",
+        "por",
+        "tras",
+        "luego",
+        "mientras",
+        "cuando",
+        "como",
+        "donde",
+    }
+
+    active_speaker = char_names[0].upper() if char_names else "PERSONAJE"
+
     for p in paragraphs:
         if p.startswith(("INT.", "EXT.", "INT/EXT.")):
             screenplay_blocks.append(p.upper())
@@ -121,6 +156,7 @@ def format_screenplay(
             if parenthetical:
                 screenplay_blocks.append(f"({parenthetical.strip().lower()})")
             screenplay_blocks.append(dialogue)
+            active_speaker = speaker
             continue
 
         # Detectar diálogo por formato "Personaje dice: 'Diálogo'"
@@ -131,6 +167,93 @@ def format_screenplay(
 
             screenplay_blocks.append(speaker)
             screenplay_blocks.append(dialogue)
+            active_speaker = speaker
+            continue
+
+        # Detectar habla indirecta narrativa
+        m_indirect = indirect_pattern.match(clean_p)
+        if m_indirect:
+            pre_part = (m_indirect.group(1) or "").strip()
+            verb_mod = (m_indirect.group(3) or "").strip()
+            dialogue_rest = re.sub(r"[.?!]+$", "", (m_indirect.group(4) or "").strip()).strip()
+
+            m_v = re.search(verbs, clean_p, re.IGNORECASE)
+            verb = (m_v.group(0) if m_v else "dice").lower()
+
+            action_part = None
+            speaker = None
+
+            # Destinatario explícito (ej: 'a Javier', 'a Juan')
+            m_rec = re.search(r"(?:a|al)\s+([A-Za-zÁÉÍÓÚáéíóúñÑ]+)", clean_p, re.IGNORECASE)
+            recipient = m_rec.group(1).upper() if m_rec else None
+
+            # Evaluar si pre_part empieza con nombre propio
+            m_lead = re.match(r"^([A-Za-zÁÉÍÓÚáéíóúñÑ]{2,15})\b", pre_part)
+            if m_lead:
+                candidate = m_lead.group(1)
+                if candidate.lower() not in ignore_words:
+                    speaker = candidate.upper()
+                    if not re.match(rf"^{re.escape(candidate)}$", pre_part, re.IGNORECASE):
+                        action_part = pre_part
+                else:
+                    action_part = pre_part
+            elif pre_part:
+                action_part = pre_part
+
+            # Si no hay hablante explícito en la cláusula, inferir por descarte de destinatario
+            if not speaker:
+                if recipient:
+                    for cn in char_names:
+                        if cn.upper() != recipient:
+                            speaker = cn.upper()
+                            break
+                if not speaker and active_speaker:
+                    speaker = active_speaker
+
+            if not speaker:
+                speaker = char_names[0].upper() if char_names else "PERSONAJE"
+            active_speaker = speaker
+
+            # Acotaciones circunstanciales
+            parenthetical = None
+            if re.search(r"al\s+o[ií]do", verb_mod, re.IGNORECASE):
+                parenthetical = "susurrando al oído"
+            elif re.search(r"en\s+voz\s+baja", verb_mod, re.IGNORECASE):
+                parenthetical = "en voz baja"
+            elif re.search(r"con\s+calma|tranquil[oa]", verb_mod, re.IGNORECASE):
+                parenthetical = "con calma"
+            elif re.search(r"furios[oa]|enfadad[oa]", verb_mod, re.IGNORECASE):
+                parenthetical = "furioso"
+            elif "susurra" in verb:
+                parenthetical = "susurrando"
+
+            # Limpiar nexos anidados 'y que '
+            dialogue_rest = re.sub(r"\s+y\s+que\s+", " y ", dialogue_rest, flags=re.IGNORECASE)
+
+            # Formatear diálogo
+            if "pregunta" in verb:
+                m_q = re.match(r"^(?:quien|quién)\s+(.+)$", dialogue_rest, re.IGNORECASE)
+                if m_q:
+                    dialogue = f"¿Quién {m_q.group(1)}?"
+                elif re.match(
+                    r"^(?:está|esta|llega|vienen|es|pasa)\b", dialogue_rest, re.IGNORECASE
+                ):
+                    dialogue = f"¿Quién {dialogue_rest}?"
+                else:
+                    dialogue = f"¿{dialogue_rest[0].upper() + dialogue_rest[1:]}?"
+            elif "grita" in verb:
+                dialogue = f"¡{dialogue_rest[0].upper() + dialogue_rest[1:]}!"
+            else:
+                dialogue = f"{dialogue_rest[0].upper() + dialogue_rest[1:]}."
+
+            if action_part:
+                action_clean = re.sub(r"[.?!]+$", "", action_part) + "."
+                screenplay_blocks.append(action_clean)
+
+            screenplay_blocks.append(speaker)
+            if parenthetical:
+                screenplay_blocks.append(f"({parenthetical})")
+            screenplay_blocks.append(dialogue)
             continue
 
         # Párrafo de acción narrativa: poner en mayúsculas los personajes
@@ -138,6 +261,11 @@ def format_screenplay(
         for name in char_names:
             pattern = rf"\b{re.escape(name)}\b"
             action_line = re.sub(pattern, name.upper(), action_line, flags=re.IGNORECASE)
+
+        # Recordar último personaje que inició una acción
+        m_spk_action = re.search(r"\b([A-Za-zÁÉÍÓÚáéíóúñÑ]{2,15})\b", action_line)
+        if m_spk_action and m_spk_action.group(1).lower() not in ignore_words:
+            active_speaker = m_spk_action.group(1).upper()
 
         screenplay_blocks.append(action_line)
 
