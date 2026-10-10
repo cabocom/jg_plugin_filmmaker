@@ -94,3 +94,11 @@ Esto genera un enlace simbólico canónico en `jg_agente/plugins/jg_plugin_filmm
    - *Evolución futura:* Proponer distancia focal recomendada (e.g. 35mm, 50mm, 85mm) y tipo de iluminación técnica.
 2. **Internacionalización de Terminología Cinematográfica:**
    - Los tipos de plano están en español (`PG`, `PM`, `PP`, `PD`, `PA`). Conviene admitir equivalencias universales (`WS`, `MS`, `CU`, `ECU`, `FS`).
+
+---
+
+## 7. Despliegue en Producción (VM OVH)
+
+- **Instalación:** Desplegado en `/cabocom/web/apps/films.javiergalvez.com/plugins/jg_plugin_filmmaker` y montado como volumen en modo solo lectura (`/app/plugins/jg_plugin_filmmaker:ro`) en el contenedor `jg_agente_filmmaker`.
+- **Descubrimiento Dinámico:** Cargado automáticamente mediante `ENABLED_PLUGINS=filmmaker,jg_plugin_filmmaker` por el `PluginManager` de `jg_agente`, verificando 3 tools en boot sin necesidad de Dashboard (`DASHBOARD_URL=""`, `ENABLE_HEARTBEAT=false`).
+
