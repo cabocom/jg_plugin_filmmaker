@@ -70,7 +70,7 @@ Tanto `treatment_structuring` como `screenplay_formatter` integran lógica de re
   - Validación de esquemas Pydantic y rechazo de payloads inválidos.
   - Inferencia con LLM real/mock inyectado y fallback determinista offline.
   - Estructuración de tratamiento y reemplazo de `pinned_terms`.
-  - Formateo de guión literario y resolución de estilo indirecto a parlamentos.
+  - Formateo de guión literario y resolución de estilo indirecto a parlamentos (incluyendo gerundios 'diciendo que', pronombres directos 'lo/la' y oraciones compuestas añadidas).
   - Desglose y numeración de planos técnicos con sintaxis canónica `--- shot N (tipo) ---`.
 - **Ruff:** Verificación estricta de estilo y linter en todo el árbol `jg_plugin_filmmaker/` y `tests/`.
 

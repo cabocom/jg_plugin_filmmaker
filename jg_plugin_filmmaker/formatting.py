@@ -41,6 +41,7 @@ def refine_dialogue_to_direct_speech(text: str, verb: str) -> str:
     """Nodo de refinamiento dramático: convierte tercera persona narrativa a segunda/primera persona directa."""
     res = text.strip()
     res = re.sub(r"^que\s+", "", res, flags=re.IGNORECASE)
+    res = re.sub(r"(?<=[.?!])\s*que\s+", " ", res, flags=re.IGNORECASE)
 
     # Iteración 1: Pronombres y reflexivos a interlocución directa
     replacements = [
@@ -57,6 +58,8 @@ def refine_dialogue_to_direct_speech(text: str, verb: str) -> str:
         (r"\bsu\s+castigo\b", "tu castigo"),
         (r"\bsu\s+culpa\b", "tu culpa"),
         (r"\bpara\s+recibir\s+su\b", "para recibir tu"),
+        (r"\bsus\s+actos\b", "tus actos"),
+        (r"\bsu\s+vida\b", "tu vida"),
     ]
 
     for pat, rep in replacements:
@@ -154,9 +157,9 @@ def format_screenplay(
     )
 
     verbs = (
-        r"(?:dice|dijo|decir|pregunta|preguntó|preguntar|responde|respondió|responder|"
-        r"contesta|contestó|contestar|susurra|susurró|susurrar|grita|gritó|gritar|"
-        r"afirma|afirmó|afirmar|exclama|exclamó|exclamar|pide|pidió|pedir|murmura|murmuró|advierte|advirtió)"
+        r"(?:dice|dijo|decir|diciendo|pregunta|preguntó|preguntar|preguntando|responde|respondió|responder|respondiendo|"
+        r"contesta|contestó|contestar|contestando|susurra|susurró|susurrar|susurrando|grita|gritó|gritar|gritando|"
+        r"afirma|afirmó|afirmar|afirmando|exclama|exclamó|exclamar|exclamando|pide|pidió|pedir|pidiendo|murmura|murmuró|murmurar|murmurando|advierte|advirtió|advirtiendo)"
     )
     links = (
         r"(?:que\s+quien|qué\s+quien|que\s+quién|qué\s+quién|que\s+qué|qué\s+qué|"
@@ -164,7 +167,7 @@ def format_screenplay(
         r"que\s+por\s+qué|que\s+si|qué\s+|que\s+|si\s+|quién\s+|quien\s+|cómo\s+|dónde\s+|cuándo\s+|por\s+qué\s+)"
     )
     indirect_pattern = re.compile(
-        rf"^(.*?)(?:[,\s]+y\s+|\s+y\s+)?(?:(se|le|les|me|nos|te)\s+)?{verbs}\s+(.*?)\s*{links}(.+)$",
+        rf"^(.*?)(?:[,\s]+y\s+|\s+y\s+|[,\s]+)?(?:(se|le|les|me|nos|te|lo|la|los|las)\s+)?{verbs}\s*(.*?)\s*{links}(.+)$",
         re.IGNORECASE,
     )
     ignore_words = {
