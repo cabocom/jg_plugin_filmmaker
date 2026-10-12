@@ -32,7 +32,7 @@ services:
   # 2. Panel Web de Control y Gobernanza HITL (Dashboard Laravel)
   # ============================================================================
   jg_dashboard:
-    image: registry.cabocom.net/javiergalvez-ia/jg_dashboard:latest
+    image: registry.gitlab.com/javiergalvez-ia/jg_dashboard:latest
     container_name: jg_dashboard_filmmaker
     restart: unless-stopped
     depends_on:
@@ -95,7 +95,7 @@ services:
   # 4. Agente Cognitivo con plugin jg_plugin_filmmaker montado
   # ============================================================================
   jg_agente_filmmaker:
-    image: registry.cabocom.net/javiergalvez-ia/jg_agente:latest
+    image: registry.gitlab.com/javiergalvez-ia/jg_agente:latest
     container_name: jg_agente_filmmaker
     restart: unless-stopped
     depends_on:
