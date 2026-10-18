@@ -122,5 +122,11 @@ Esto genera un enlace simbólico canónico en `jg_agente/plugins/jg_plugin_filmm
 - **Mitigación ReDoS y Límites de Payload (ISSUE-035):**
   - Esquemas Pydantic acotan `raw_text`, `structured_text` y `screenplay_text` a 50.000 caracteres, y listas de contexto a límites estrictos (máx 100-200 elementos).
   - Fast-path en `formatting.py` mediante búsqueda de límites de palabra `\b<verbos>\b` y cuantificadores finitos acotados (`[^.?!]{0,250}?`, `.{1,5000}`) impidiendo backtracking catastrófico en habla indirecta.
+- **Submodelos de Dominio y Tipado Estricto Pydantic v2 (ISSUE-036):**
+  - Tipado de contratos con `CharacterContext`, `LocationContext`, `ManualDiffItem`, `UserLocksModel` y `ScriptBlockItem`.
+  - Configuración `extra="ignore"` para asimilar metadatos de Eloquent/Laravel sin divergir del esquema.
+  - Protocolo `LLMClientProtocol` para desacoplar y tipar clientes cognitivos.
+  - Logging estructurado (`logger.exception`) y ofuscación de excepciones internas hacia el cliente.
+
 
 

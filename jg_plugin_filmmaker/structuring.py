@@ -44,6 +44,11 @@ def apply_user_locks(
     if not user_locks or not text:
         return text
 
+    if hasattr(user_locks, "model_dump"):
+        user_locks = user_locks.model_dump()
+    elif not isinstance(user_locks, dict):
+        return text
+
     result = text
 
     # 1. Aplicar términos fijados (pinned_terms) respetando límites de palabra si es posible
