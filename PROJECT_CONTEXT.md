@@ -127,6 +127,9 @@ Esto genera un enlace simbólico canónico en `jg_agente/plugins/jg_plugin_filmm
   - Configuración `extra="ignore"` para asimilar metadatos de Eloquent/Laravel sin divergir del esquema.
   - Protocolo `LLMClientProtocol` para desacoplar y tipar clientes cognitivos.
   - Logging estructurado (`logger.exception`) y ofuscación de excepciones internas hacia el cliente.
+- **Protección contra IndexError en Diálogos Residuales (ISSUE-038):**
+  - Validación de núcleo de diálogo en `refine_dialogue_to_direct_speech` con fallback canónico a elipsis (`¿...?`, `¡...!`, `...`) ante oraciones vacías o compuestas exclusivamente por signos ortográficos.
+
 
 
 

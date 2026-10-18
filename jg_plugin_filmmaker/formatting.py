@@ -70,24 +70,36 @@ def refine_dialogue_to_direct_speech(text: str, verb: str) -> str:
     res = re.sub(r"\s+y\s+(tienes|debes|ahora|no|vas)\b", r". \1", res, flags=re.IGNORECASE)
 
     # Iteración 3: Mayúsculas y signos
+    core = res.strip(".?!¿¡ ")
+
     if "pregunta" in verb:
         m_q = re.match(r"^(?:quien|quién)\s+(.+)$", res, re.IGNORECASE)
         if m_q:
             return f"¿Quién {m_q.group(1)}?"
         elif re.match(r"^(?:está|esta|llega|vienen|es|pasa)\b", res, re.IGNORECASE):
             return f"¿Quién {res}?"
-        return f"¿{res.strip('.?!')[0].upper() + res.strip('.?!')[1:]}?"
+        if not core:
+            return "¿...?"
+        return f"¿{core[0].upper() + core[1:]}?"
 
     if "grita" in verb:
-        return f"¡{res.strip('.?!')[0].upper() + res.strip('.?!')[1:]}!"
+        if not core:
+            return "¡...!"
+        return f"¡{core[0].upper() + core[1:]}!"
+
+    if not core:
+        return "..."
 
     sentences = [s.strip() for s in re.split(r"(?<=[.?!])\s+", res) if s.strip()]
     formatted = []
     for s in sentences:
-        if s:
-            formatted.append(s[0].upper() + s[1:])
+        s_core = s.strip(".?!¿¡ ")
+        if s_core:
+            formatted.append(s_core[0].upper() + s_core[1:])
+        elif s:
+            formatted.append(s)
 
-    clean_out = " ".join(formatted) if formatted else res
+    clean_out = " ".join(formatted) if formatted else core
     return clean_out.rstrip(".?!") + "."
 
 
