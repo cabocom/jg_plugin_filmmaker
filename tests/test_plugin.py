@@ -14,7 +14,7 @@ async def test_plugin_runner_integration():
         assert runner.metadata.name == "filmmaker"
         health = await runner.health_check()
         assert health["status"] == "ok"
-        assert health["tools_count"] == 3
+        assert health["tools_count"] == 4
 
         # Ejecución de treatment_structuring
         res_struct = runner.run_tool(
@@ -38,3 +38,13 @@ async def test_plugin_runner_integration():
         )
         assert res_shots.success is True
         assert "--- shot 1 (" in res_shots.output
+
+        # Ejecución de plot_hole_detector
+        res_holes = runner.run_tool(
+            "plot_hole_detector",
+            {
+                "blocks": [{"id": "b1", "text": "Javier camina."}],
+            },
+        )
+        assert res_holes.success is True
+        assert res_holes.metadata["stage"] == "plot_holes"

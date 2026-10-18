@@ -24,26 +24,26 @@ class FilmmakerPlugin(BasePlugin):
         """Retorna los metadatos canónicos del plugin filmmaker."""
         return PluginMetadata(
             name="filmmaker",
-            version="1.0.0",
-            description="Plugin de asistencia cinematográfica para guion y rodaje",
+            version="2.3.0",
+            description="Plugin de asistencia cinematográfica para guion, rodaje y detección de agujeros",
             author="Javier Gálvez",
             dependencies=[],
             jg_agente_version_min="1.0.0",
-            tags=["filmmaker", "cinema", "screenplay", "shots", "preproduction"],
+            tags=["filmmaker", "cinema", "screenplay", "shots", "plot_holes", "preproduction"],
             extra={"risk_level": RiskLevel.LOW},
         )
 
     def register_tools(self) -> list[AgentTool]:
-        """Declara las tres herramientas canónicas provistas por el plugin."""
+        """Declara las cuatro herramientas canónicas provistas por el plugin."""
         return get_filmmaker_tools()
 
     def register_engines(self) -> dict[str, BaseEngine]:
-        """Declara los motores cognitivos provistos por el plugin (ninguno requerido en fase 3A)."""
+        """Declara los motores cognitivos provistos por el plugin."""
         return {}
 
     async def startup(self) -> None:
         """Inicialización asíncrona al cargar el plugin en jg_agente."""
-        logger.info("Inicializando FilmmakerPlugin v1.0.0...")
+        logger.info("Inicializando FilmmakerPlugin v2.3.0...")
         self._is_started = True
 
     async def shutdown(self) -> None:
@@ -56,7 +56,7 @@ class FilmmakerPlugin(BasePlugin):
         return {
             "status": "ok",
             "plugin": "filmmaker",
-            "version": "1.0.0",
+            "version": "2.3.0",
             "started": self._is_started,
             "tools_count": len(self.register_tools()),
         }

@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from jg_plugin_filmmaker.breakdown import breakdown_screenplay_to_shots
 from jg_plugin_filmmaker.formatting import format_screenplay
+from jg_plugin_filmmaker.plot_holes import detect_plot_holes
 from jg_plugin_filmmaker.structuring import structure_treatment
 
 # =====================================================================
@@ -71,6 +72,23 @@ class ShotBreakdownDetectorArgs(BaseModel):
         ...,
         min_length=1,
         description="Texto del guión literario de la escena a desglosar técnicamente.",
+    )
+
+
+class PlotHoleDetectorArgs(BaseModel):
+    """Argumentos de entrada para la herramienta plot_hole_detector."""
+
+    blocks: list[dict[str, Any]] = Field(
+        ...,
+        description="Lista de bloques narrativos ordenados del guión a auditar.",
+    )
+    characters: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Contexto opcional de personajes de la Biblia dramática.",
+    )
+    locations: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Contexto opcional de localizaciones de la Biblia.",
     )
 
 
@@ -179,6 +197,38 @@ def execute_shot_breakdown_detector(
         )
 
 
+def execute_plot_hole_detector(
+    blocks: list[dict[str, Any]],
+    characters: list[dict[str, Any]] | None = None,
+    locations: list[dict[str, Any]] | None = None,
+    llm_client: Any = None,
+) -> ToolResult:
+    """Ejecuta la auditoría dramática de agujeros de guión."""
+    try:
+        holes = detect_plot_holes(
+            blocks=blocks,
+            characters=characters,
+            locations=locations,
+            llm_client=llm_client,
+        )
+
+        return ToolResult(
+            success=True,
+            output=f"Auditoría dramática completada: {len(holes)} agujero(s) detectado(s).",
+            metadata={
+                "stage": "plot_holes",
+                "detected_holes": holes,
+                "total_holes": len(holes),
+            },
+        )
+    except Exception as e:
+        return ToolResult(
+            success=False,
+            output="",
+            error=f"Fallo al auditar agujeros de guión: {e}",
+        )
+
+
 # =====================================================================
 # 3. Descriptores AgentTool Canónicos
 # =====================================================================
@@ -219,6 +269,18 @@ shot_breakdown_detector_tool = AgentTool(
     read_only=True,
 )
 
+plot_hole_detector_tool = AgentTool(
+    name="plot_hole_detector",
+    description="Audita la secuencia narrativa y detecta inconsistencias dramáticas y de continuidad.",
+    category="filmmaker",
+    version="1.0.0",
+    args_schema=PlotHoleDetectorArgs,
+    func=execute_plot_hole_detector,
+    risk_level=RiskLevel.LOW,
+    tool_type=ToolType.OBSERVER,
+    read_only=True,
+)
+
 
 def get_filmmaker_tools() -> list[AgentTool]:
     """Retorna la lista ordenada de herramientas provistas por el plugin."""
@@ -226,4 +288,5 @@ def get_filmmaker_tools() -> list[AgentTool]:
         treatment_structuring_tool,
         screenplay_formatter_tool,
         shot_breakdown_detector_tool,
+        plot_hole_detector_tool,
     ]

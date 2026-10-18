@@ -5,10 +5,12 @@ from jg_sdk.contracts import RiskLevel, ToolResult
 
 from jg_plugin_filmmaker.plugin import FilmmakerPlugin
 from jg_plugin_filmmaker.tools import (
+    execute_plot_hole_detector,
     execute_screenplay_formatter,
     execute_shot_breakdown_detector,
     execute_treatment_structuring,
     get_filmmaker_tools,
+    plot_hole_detector_tool,
     screenplay_formatter_tool,
     shot_breakdown_detector_tool,
     treatment_structuring_tool,
@@ -21,21 +23,25 @@ def test_plugin_metadata_and_registration():
     meta = plugin.get_plugin_metadata()
 
     assert meta.name == "filmmaker"
-    assert meta.version == "1.0.0"
+    assert meta.version == "2.3.0"
     assert meta.author == "Javier Gálvez"
     assert "cinema" in meta.tags
+    assert "plot_holes" in meta.tags
 
     tools = plugin.register_tools()
-    assert len(tools) == 3
+    assert len(tools) == 4
 
     tool_names = [t.name for t in tools]
     assert "treatment_structuring" in tool_names
     assert "screenplay_formatter" in tool_names
     assert "shot_breakdown_detector" in tool_names
+    assert "plot_hole_detector" in tool_names
 
     for t in tools:
         assert t.risk_level == RiskLevel.LOW
         assert t.read_only is True
+
+    assert plot_hole_detector_tool.name == "plot_hole_detector"
 
 
 def test_treatment_structuring_basic_and_context():
@@ -181,7 +187,7 @@ def test_shot_breakdown_detector_canonical_syntax():
 def test_agent_tools_run_invocation():
     """Valida la ejecución de las herramientas a través del método AgentTool.run()."""
     all_tools = get_filmmaker_tools()
-    assert len(all_tools) == 3
+    assert len(all_tools) == 4
 
     # Invocación de treatment_structuring vía AgentTool
     res1 = treatment_structuring_tool.run(raw_text="Acción dramática de prueba.")
@@ -196,6 +202,11 @@ def test_agent_tools_run_invocation():
     assert res3.success is True
     assert "--- shot 1 (" in res3.output
 
+    # Invocación de plot_hole_detector vía AgentTool
+    res4 = plot_hole_detector_tool.run(blocks=[{"id": "b1", "text": "Acción."}])
+    assert res4.success is True
+    assert res4.metadata["stage"] == "plot_holes"
+
 
 @pytest.mark.asyncio
 async def test_plugin_lifecycle_and_health():
@@ -209,7 +220,7 @@ async def test_plugin_lifecycle_and_health():
     health = await plugin.health_check()
     assert health["status"] == "ok"
     assert health["plugin"] == "filmmaker"
-    assert health["tools_count"] == 3
+    assert health["tools_count"] == 4
 
     await plugin.shutdown()
     assert plugin._is_started is False
@@ -316,3 +327,36 @@ def test_llm_inference_shot_breakdown_parses_canonical_delimiters():
     assert shots[0]["shot_type"] == "PG"
     assert shots[1]["shot_type"] == "PP"
     assert shots[2]["shot_type"] == "PD"
+
+
+def test_plot_hole_detector_detects_inconsistencies():
+    """Verifica que plot_hole_detector detecta inconsistencias dramáticas y espaciales."""
+    blocks = [
+        {"id": "b1", "text": "Javier entra al bar y habla con el camarero."},
+        {
+            "id": "b2",
+            "text": "De repente, Javier se teletransporta al tejado del edificio sin cruzar ninguna puerta.",
+        },
+    ]
+
+    result = execute_plot_hole_detector(blocks=blocks)
+
+    assert result.success is True
+    assert result.metadata["stage"] == "plot_holes"
+    assert result.metadata["total_holes"] >= 1
+    holes = result.metadata["detected_holes"]
+    assert any(h["block_id"] == "b2" for h in holes)
+
+
+def test_plot_hole_detector_consistent_script_returns_zero_holes():
+    """Verifica que un guión coherente no genera falsos positivos."""
+    blocks = [
+        {"id": "b1", "text": "Javier camina por la calle solitaria."},
+        {"id": "b2", "text": "Javier empuja la puerta del café y saluda amablemente."},
+    ]
+
+    result = execute_plot_hole_detector(blocks=blocks)
+
+    assert result.success is True
+    assert result.metadata["total_holes"] == 0
+    assert len(result.metadata["detected_holes"]) == 0

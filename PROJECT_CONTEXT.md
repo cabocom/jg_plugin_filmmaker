@@ -45,13 +45,24 @@ Actúa como backend de procesamiento cognitivo para la aplicación web `jg_filmm
 ### 2.3. `shot_breakdown_detector`
 - **Módulo:** `jg_plugin_filmmaker/breakdown.py`
 - **Propósito:** Analiza el guión literario y propone un desglose técnico de planos de cámara para rodaje evaluando tensión dramática con `BREAKDOWN_SYSTEM_PROMPT`.
-- **Esquema de Entrada (`BreakdownInput`):**
+- **Esquema de Entrada (`ShotBreakdownDetectorArgs`):**
   - `screenplay_text` (str): Contenido en formato guión literario.
 - **Sintaxis Canónica:** Emplea estrictamente delimitadores canónicos:
   `--- shot N (tipo) ---` (ejemplos: `--- shot 1 (PG) ---`, `--- shot 2 (PM) ---`, `--- shot 3 (PP) ---`, `--- shot 4 (PD) ---`).
 - **Salida (`ToolResult`):**
   - `data["shots"]`: Lista de diccionarios con metadatos de planos (`shot_number`, `shot_type`, `description`).
   - `data["annotated_text"]`: Guión con marcadores de plano intercalados.
+
+### 2.4. `plot_hole_detector`
+- **Módulo:** `jg_plugin_filmmaker/plot_holes.py`
+- **Propósito:** Audita la secuencia narrativa y cronológica de bloques del proyecto, cotejando la consistencia dramática, la continuidad espacial/temporal y la presencia de personajes de la Biblia mediante `PLOT_HOLE_SYSTEM_PROMPT` o motor determinista.
+- **Esquema de Entrada (`PlotHoleDetectorArgs`):**
+  - `blocks` (list[dict[str, Any]]): Bloques narrativos con identificador y texto.
+  - `characters` (list[dict[str, Any]], opcional): Contexto de personajes de la Biblia.
+  - `locations` (list[dict[str, Any]], opcional): Contexto de localizaciones.
+- **Salida (`ToolResult`):**
+  - `metadata["detected_holes"]`: Lista de dicts `{"block_id": str, "reason": str}`.
+  - `metadata["total_holes"]`: Entero con la cantidad de inconsistencias detectadas.
 
 ---
 
@@ -65,13 +76,14 @@ Tanto `treatment_structuring` como `screenplay_formatter` integran lógica de re
 
 ## 4. Pruebas y Control de Calidad
 
-- **Pytest:** 13 pruebas unitarias en `tests/test_filmmaker_tools.py` y `tests/test_plugin.py` cubriendo:
-  - Registro de metadatos del plugin (`FilmmakerPlugin.get_metadata()`).
+- **Pytest:** 15 pruebas unitarias en `tests/test_filmmaker_tools.py` y `tests/test_plugin.py` cubriendo:
+  - Registro de metadatos del plugin (`FilmmakerPlugin.get_metadata()`) y catálogo de 4 herramientas.
   - Validación de esquemas Pydantic y rechazo de payloads inválidos.
   - Inferencia con LLM real/mock inyectado y fallback determinista offline.
   - Estructuración de tratamiento y reemplazo de `pinned_terms`.
-  - Formateo de guión literario y resolución de estilo indirecto a parlamentos (incluyendo gerundios 'diciendo que', pronombres directos 'lo/la' y oraciones compuestas añadidas).
+  - Formateo de guión literario y resolución de estilo indirecto a parlamentos.
   - Desglose y numeración de planos técnicos con sintaxis canónica `--- shot N (tipo) ---`.
+  - Detección de inconsistencias y agujeros dramáticos con `plot_hole_detector`.
 - **Ruff:** Verificación estricta de estilo y linter en todo el árbol `jg_plugin_filmmaker/` y `tests/`.
 
 ---
