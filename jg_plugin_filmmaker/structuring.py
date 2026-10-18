@@ -49,10 +49,28 @@ def apply_user_locks(
     # 1. Aplicar términos fijados (pinned_terms) respetando límites de palabra si es posible
     pinned_terms = user_locks.get("pinned_terms", {})
     if isinstance(pinned_terms, dict):
+        count = 0
         for term, replacement in pinned_terms.items():
-            if term and replacement:
-                pattern = rf"\b{re.escape(str(term))}\b"
-                result = re.sub(pattern, str(replacement), result, flags=re.IGNORECASE)
+            if count >= 50:
+                break
+            term_str = str(term).strip()
+            rep_str = str(replacement).strip()
+
+            if not term_str or not rep_str or len(term_str) > 80 or len(rep_str) > 80:
+                continue
+
+            quoted = re.escape(term_str)
+            start_bound = r"(?<![\w])" if re.match(r"^\w", term_str, re.UNICODE) else ""
+            end_bound = r"(?![\w])" if re.search(r"\w$", term_str, re.UNICODE) else ""
+            pattern = rf"{start_bound}{quoted}{end_bound}"
+
+            result = re.sub(
+                pattern,
+                lambda _m, r=rep_str: r,
+                result,
+                flags=re.IGNORECASE,
+            )
+            count += 1
 
     # 2. Aplicar diffs manuales para la etapa correspondiente
     manual_diffs = user_locks.get("manual_diffs", [])

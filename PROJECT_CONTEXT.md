@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.3.0  
+**Versión:** 2.4.0  
 **Fecha:** 18 de octubre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Pytest, Ruff  
-**Estado:** Totalmente implementado. Sincronización canónica con Biblia dramática de `jg_filmmaker` (ISSUE-012: soporte enriquecido de `bio`, `psychology`, `costume_notes`, arte e iluminación en prompts semánticos de tratamiento). 13 tests unitarios pasando al 100% en CI/CD.
+**Estado:** Totalmente implementado. Sincronización canónica con Biblia dramática de `jg_filmmaker` (ISSUE-012) y sanitización de `pinned_terms` (ISSUE-016: sustitución segura sin backreferences con lambda en `re.sub`, lookarounds adaptativos para símbolos como `C++` o `#1` y límites de seguridad). 18 tests unitarios pasando al 100% en CI/CD.
 
 ---
 
