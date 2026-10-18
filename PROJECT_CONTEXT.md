@@ -134,6 +134,10 @@ Esto genera un enlace simbólico canónico en `jg_agente/plugins/jg_plugin_filmm
   - Timeouts efectivos (`timeout=30.0`) y executor no bloqueante para llamadas síncronas y asíncronas a modelos LLM.
   - Blindaje contra prompt injection delimitando contextos dramáticos con etiquetas XML inertes (`<bible_characters>`, `<pinned_terms>`).
   - Reporte estandarizado de `source: "agent" | "heuristic_fallback"` y `degraded: False | True` en `ToolResult.metadata`.
+- **Cobertura Exhaustiva y Paridad de Contratos Golden (ISSUE-042):**
+  - Suite de 51 pruebas automatizadas cubriendo casos límite, Pydantic v2 estricto, backreferences, ReDoS y resiliencia.
+  - Golden contract vectors compartidos (`contract_golden_vectors.json`) validados en Python y Laravel.
+
 
 
 
