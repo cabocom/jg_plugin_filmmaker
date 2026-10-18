@@ -129,6 +129,12 @@ Esto genera un enlace simbólico canónico en `jg_agente/plugins/jg_plugin_filmm
   - Logging estructurado (`logger.exception`) y ofuscación de excepciones internas hacia el cliente.
 - **Protección contra IndexError en Diálogos Residuales (ISSUE-038):**
   - Validación de núcleo de diálogo en `refine_dialogue_to_direct_speech` con fallback canónico a elipsis (`¿...?`, `¡...!`, `...`) ante oraciones vacías o compuestas exclusivamente por signos ortográficos.
+- **Desacoplamiento de LLM, Timeouts y Mock Fail-Closed (ISSUE-037):**
+  - Modo mock `is_mock_mode()` fail-closed en ausencia de API keys o en tests, garantizando consumo cero tokens.
+  - Timeouts efectivos (`timeout=30.0`) y executor no bloqueante para llamadas síncronas y asíncronas a modelos LLM.
+  - Blindaje contra prompt injection delimitando contextos dramáticos con etiquetas XML inertes (`<bible_characters>`, `<pinned_terms>`).
+  - Reporte estandarizado de `source: "agent" | "heuristic_fallback"` y `degraded: False | True` en `ToolResult.metadata`.
+
 
 
 

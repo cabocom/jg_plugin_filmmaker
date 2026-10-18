@@ -304,12 +304,13 @@ def execute_treatment_structuring(
 
         locks_data = user_locks.model_dump() if isinstance(user_locks, BaseModel) else user_locks
 
-        structured_output = structure_treatment(
+        structured_output, step_meta = structure_treatment(
             raw_text=raw_text,
             characters_context=chars_data,
             location_context=loc_data,
             user_locks=locks_data,
             llm_client=llm_client,
+            return_meta=True,
         )
 
         applied_locks_count = 0
@@ -326,6 +327,8 @@ def execute_treatment_structuring(
             metadata={
                 "stage": "structured",
                 "applied_locks_count": applied_locks_count,
+                "source": step_meta.get("source", "heuristic_fallback"),
+                "degraded": step_meta.get("degraded", True),
             },
         )
     except Exception as e:
@@ -359,12 +362,13 @@ def execute_screenplay_formatter(
 
         locks_data = user_locks.model_dump() if isinstance(user_locks, BaseModel) else user_locks
 
-        screenplay_output = format_screenplay(
+        screenplay_output, step_meta = format_screenplay(
             structured_text=structured_text,
             characters_context=chars_data,
             location_context=loc_data,
             user_locks=locks_data,
             llm_client=llm_client,
+            return_meta=True,
         )
 
         return ToolResult(
@@ -373,6 +377,8 @@ def execute_screenplay_formatter(
             metadata={
                 "stage": "screenplay",
                 "format": "fountain",
+                "source": step_meta.get("source", "heuristic_fallback"),
+                "degraded": step_meta.get("degraded", True),
             },
         )
     except Exception as e:
