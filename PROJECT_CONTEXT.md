@@ -114,3 +114,13 @@ Esto genera un enlace simbólico canónico en `jg_agente/plugins/jg_plugin_filmm
 - **Instalación:** Desplegado en `/cabocom/web/apps/films.javiergalvez.com/plugins/jg_plugin_filmmaker` y montado como volumen en modo solo lectura (`/app/plugins/jg_plugin_filmmaker:ro`) en el contenedor `jg_agente_filmmaker`.
 - **Descubrimiento Dinámico:** Cargado automáticamente mediante `ENABLED_PLUGINS=filmmaker,jg_plugin_filmmaker` por el `PluginManager` de `jg_agente`, verificando 3 tools en boot sin necesidad de Dashboard (`DASHBOARD_URL=""`, `ENABLE_HEARTBEAT=false`).
 
+---
+
+## 8. Seguridad y Robustez de Entrada (Auditoría 2026-10-18)
+
+- **Sanitización de Backreferences (ISSUE-016):** Reemplazo literal de `pinned_terms` previniendo inyección de subpatrones regex o escapes octales.
+- **Mitigación ReDoS y Límites de Payload (ISSUE-035):**
+  - Esquemas Pydantic acotan `raw_text`, `structured_text` y `screenplay_text` a 50.000 caracteres, y listas de contexto a límites estrictos (máx 100-200 elementos).
+  - Fast-path en `formatting.py` mediante búsqueda de límites de palabra `\b<verbos>\b` y cuantificadores finitos acotados (`[^.?!]{0,250}?`, `.{1,5000}`) impidiendo backtracking catastrófico en habla indirecta.
+
+

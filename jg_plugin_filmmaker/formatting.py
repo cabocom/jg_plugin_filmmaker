@@ -166,8 +166,9 @@ def format_screenplay(
         r"que\s+cómo|qué\s+cómo|que\s+dónde|qué\s+dónde|que\s+cuándo|qué\s+cuándo|"
         r"que\s+por\s+qué|que\s+si|qué\s+|que\s+|si\s+|quién\s+|quien\s+|cómo\s+|dónde\s+|cuándo\s+|por\s+qué\s+)"
     )
+    verbs_re = re.compile(rf"\b{verbs}\b", re.IGNORECASE)
     indirect_pattern = re.compile(
-        rf"^(.*?)(?:[,\s]+y\s+|\s+y\s+|[,\s]+)?(?:(se|le|les|me|nos|te|lo|la|los|las)\s+)?{verbs}\s*(.*?)\s*{links}(.+)$",
+        rf"^([^.?!]{{0,250}}?)(?:[,\s]+y\s+|\s+y\s+|[,\s]+)?(?:(se|le|les|me|nos|te|lo|la|los|las)\s+)?\b{verbs}\b\s*([^.?!]{{0,100}}?)\s*{links}(.{{1,5000}})$",
         re.IGNORECASE,
     )
     ignore_words = {
@@ -224,8 +225,8 @@ def format_screenplay(
             active_speaker = speaker
             continue
 
-        # Detectar habla indirecta narrativa
-        m_indirect = indirect_pattern.match(clean_p)
+        # Detectar habla indirecta narrativa con fast-path previo de descarte
+        m_indirect = indirect_pattern.match(clean_p) if verbs_re.search(clean_p) else None
         if m_indirect:
             pre_part = (m_indirect.group(1) or "").strip()
             verb_mod = (m_indirect.group(3) or "").strip()

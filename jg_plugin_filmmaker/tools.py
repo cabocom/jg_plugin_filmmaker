@@ -27,10 +27,12 @@ class TreatmentStructuringArgs(BaseModel):
     raw_text: str = Field(
         ...,
         min_length=1,
+        max_length=50000,
         description="Texto libre original o notas dramáticas del autor a normalizar.",
     )
     characters_context: list[dict[str, Any]] | None = Field(
         default=None,
+        max_length=100,
         description="Lista de diccionarios con el contexto de personajes (nombre, psicología, etc.).",
     )
     location_context: dict[str, Any] | None = Field(
@@ -49,10 +51,12 @@ class ScreenplayFormatterArgs(BaseModel):
     structured_text: str = Field(
         ...,
         min_length=1,
+        max_length=50000,
         description="Tratamiento narrativo secuencial previamente normalizado.",
     )
     characters_context: list[dict[str, Any]] | None = Field(
         default=None,
+        max_length=100,
         description="Lista de personajes para capitalización canónica y atribución de diálogos.",
     )
     location_context: dict[str, Any] | None = Field(
@@ -71,6 +75,7 @@ class ShotBreakdownDetectorArgs(BaseModel):
     screenplay_text: str = Field(
         ...,
         min_length=1,
+        max_length=50000,
         description="Texto del guión literario de la escena a desglosar técnicamente.",
     )
 
@@ -80,14 +85,18 @@ class PlotHoleDetectorArgs(BaseModel):
 
     blocks: list[dict[str, Any]] = Field(
         ...,
+        min_length=1,
+        max_length=200,
         description="Lista de bloques narrativos ordenados del guión a auditar.",
     )
     characters: list[dict[str, Any]] | None = Field(
         default=None,
+        max_length=100,
         description="Contexto opcional de personajes de la Biblia dramática.",
     )
     locations: list[dict[str, Any]] | None = Field(
         default=None,
+        max_length=100,
         description="Contexto opcional de localizaciones de la Biblia.",
     )
 
