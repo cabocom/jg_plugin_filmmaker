@@ -89,17 +89,39 @@ def structure_treatment(
     if active_llm is not None:
         chars_desc = "Sin personajes específicos definidos."
         if characters_context and isinstance(characters_context, list):
-            chars_desc = "\n".join(
-                f"- {c.get('name', '')}: {c.get('bio', '')} (Rol: {c.get('role', 'personaje')})"
-                for c in characters_context
-                if isinstance(c, dict) and "name" in c
-            )
+            formatted_chars: list[str] = []
+            for c in characters_context:
+                if isinstance(c, dict) and "name" in c:
+                    details: list[str] = []
+                    if c.get("role"):
+                        details.append(f"Rol: {c['role']}")
+                    if c.get("bio"):
+                        details.append(f"Biografía: {c['bio']}")
+                    if c.get("psychology"):
+                        details.append(f"Psicología: {c['psychology']}")
+                    if c.get("costume_notes"):
+                        details.append(f"Vestuario: {c['costume_notes']}")
+                    desc = f"- {c['name']}"
+                    if details:
+                        desc += f" ({', '.join(details)})"
+                    formatted_chars.append(desc)
+            if formatted_chars:
+                chars_desc = "\n".join(formatted_chars)
 
         loc_desc = "Sin localización específica."
         if location_context and isinstance(location_context, dict):
             lname = location_context.get("name", "ESCENARIO")
             ltype = location_context.get("type", "INT")
+            loc_notes: list[str] = []
+            if location_context.get("lighting_notes"):
+                loc_notes.append(f"Iluminación: {location_context['lighting_notes']}")
+            if location_context.get("art_department_notes"):
+                loc_notes.append(f"Arte: {location_context['art_department_notes']}")
+            if location_context.get("time_of_day"):
+                loc_notes.append(f"Momento: {location_context['time_of_day']}")
             loc_desc = f"{lname} ({ltype})"
+            if loc_notes:
+                loc_desc += f" [{', '.join(loc_notes)}]"
 
         locks_desc = "Ningún término fijado."
         if user_locks and isinstance(user_locks, dict):

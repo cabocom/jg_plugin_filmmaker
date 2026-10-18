@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.2.0  
-**Fecha:** 10 de octubre de 2026  
+**Versión:** 2.3.0  
+**Fecha:** 18 de octubre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Pytest, Ruff  
-**Estado:** Totalmente implementado, inferencia semántica LLM, refinamiento iterativo de habla indirecta a estilo directo teatral canónico y degradación mock determinista verificado con 13 tests unitarios (100% pasando en CI/CD).
+**Estado:** Totalmente implementado. Sincronización canónica con Biblia dramática de `jg_filmmaker` (ISSUE-012: soporte enriquecido de `bio`, `psychology`, `costume_notes`, arte e iluminación en prompts semánticos de tratamiento). 13 tests unitarios pasando al 100% en CI/CD.
 
 ---
 
@@ -25,10 +25,10 @@ Actúa como backend de procesamiento cognitivo para la aplicación web `jg_filmm
 ### 2.1. `treatment_structuring`
 - **Módulo:** `jg_plugin_filmmaker/structuring.py`
 - **Propósito:** Normaliza texto libre, notas o borradores en prosa de tratamiento cinematográfico en presente continuo mediante `STRUCTURING_SYSTEM_PROMPT`.
-- **Esquema de Entrada (`TreatmentInput`):**
+- **Esquema de Entrada (`TreatmentStructuringArgs`):**
   - `raw_text` (str): Texto bruto inicial redactado por el cineasta.
-  - `characters_context` (list[str], opcional): Lista de nombres y arquetipos de personajes de la escena.
-  - `location_context` (str, opcional): Slugline o nombre de la localización (e.g., `BAR CENTRAL (INT)`).
+  - `characters_context` (list[dict[str, Any]], opcional): Contexto estructurado de personajes de la Biblia (`name`, `bio`, `psychology`, `costume_notes`, `role`).
+  - `location_context` (dict[str, Any], opcional): Metadatos del escenario (`name`, `type`, `art_department_notes`, `lighting_notes`, `time_of_day`).
   - `user_locks` (dict[str, Any], opcional): Estructura de bloqueos y `pinned_terms` del autor.
 - **Salida (`ToolResult`):** Texto de tratamiento estructurado respetando la inmutabilidad de los términos bloqueados.
 
