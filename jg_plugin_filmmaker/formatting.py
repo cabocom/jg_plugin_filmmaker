@@ -6,7 +6,7 @@ Resuelve semánticamente el estilo indirecto mediante LLM o mediante fallback he
 """
 
 import re
-from typing import Any
+from typing import Any, Literal, overload
 
 from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
 from jg_plugin_filmmaker.structuring import apply_user_locks
@@ -105,6 +105,39 @@ def refine_dialogue_to_direct_speech(text: str, verb: str) -> str:
 
     clean_out = " ".join(formatted) if formatted else core
     return clean_out.rstrip(".?!") + "."
+
+
+@overload
+def format_screenplay(
+    structured_text: str,
+    characters_context: list[dict[str, Any]] | None = None,
+    location_context: dict[str, Any] | None = None,
+    user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
+    return_meta: Literal[False] = False,
+) -> str: ...
+
+
+@overload
+def format_screenplay(
+    structured_text: str,
+    characters_context: list[dict[str, Any]] | None = None,
+    location_context: dict[str, Any] | None = None,
+    user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
+    return_meta: Literal[True] = ...,
+) -> tuple[str, dict[str, Any]]: ...
+
+
+@overload
+def format_screenplay(
+    structured_text: str,
+    characters_context: list[dict[str, Any]] | None = None,
+    location_context: dict[str, Any] | None = None,
+    user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
+    return_meta: bool = ...,
+) -> str | tuple[str, dict[str, Any]]: ...
 
 
 def format_screenplay(

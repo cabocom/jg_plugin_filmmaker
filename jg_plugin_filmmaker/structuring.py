@@ -7,7 +7,7 @@ Soporta inferencia semántica con LLM o fallback determinista para testing y CI.
 """
 
 import re
-from typing import Any
+from typing import Any, Literal, overload
 
 from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
 
@@ -77,9 +77,12 @@ def apply_user_locks(
             end_bound = r"(?![\w])" if re.search(r"\w$", term_str, re.UNICODE) else ""
             pattern = rf"{start_bound}{quoted}{end_bound}"
 
+            def _repl(_m: re.Match[str], val: str = rep_str) -> str:
+                return val
+
             result = re.sub(
                 pattern,
-                lambda _m, r=rep_str: r,
+                _repl,
                 result,
                 flags=re.IGNORECASE,
             )
@@ -100,6 +103,39 @@ def apply_user_locks(
                 result = result.replace(original, override)
 
     return result
+
+
+@overload
+def structure_treatment(
+    raw_text: str,
+    characters_context: list[dict[str, Any]] | None = None,
+    location_context: dict[str, Any] | None = None,
+    user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
+    return_meta: Literal[False] = False,
+) -> str: ...
+
+
+@overload
+def structure_treatment(
+    raw_text: str,
+    characters_context: list[dict[str, Any]] | None = None,
+    location_context: dict[str, Any] | None = None,
+    user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
+    return_meta: Literal[True] = ...,
+) -> tuple[str, dict[str, Any]]: ...
+
+
+@overload
+def structure_treatment(
+    raw_text: str,
+    characters_context: list[dict[str, Any]] | None = None,
+    location_context: dict[str, Any] | None = None,
+    user_locks: dict[str, Any] | None = None,
+    llm_client: Any = None,
+    return_meta: bool = ...,
+) -> str | tuple[str, dict[str, Any]]: ...
 
 
 def structure_treatment(
