@@ -16,6 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from jg_plugin_filmmaker.breakdown import breakdown_screenplay_to_shots
 from jg_plugin_filmmaker.formatting import format_screenplay
 from jg_plugin_filmmaker.plot_holes import detect_plot_holes
+from jg_plugin_filmmaker.storyboard import (
+    StoryboardGeneratorArgs,
+    generate_storyboard_image,
+)
 from jg_plugin_filmmaker.structuring import structure_treatment
 
 logger = logging.getLogger(__name__)
@@ -463,6 +467,27 @@ def execute_plot_hole_detector(
         )
 
 
+def execute_generate_storyboard(
+    args: StoryboardGeneratorArgs | dict[str, Any], **kwargs: Any
+) -> ToolResult:
+    """Ejecuta la generación de viñeta de storyboard con validación Pydantic v2."""
+    if isinstance(args, dict):
+        validated_args = StoryboardGeneratorArgs.model_validate(args)
+    else:
+        validated_args = args
+
+    return generate_storyboard_image(
+        prompt=validated_args.prompt,
+        style=validated_args.style,
+        character_name=validated_args.character_name,
+        character_image_base64=validated_args.character_image_base64,
+        location_name=validated_args.location_name,
+        location_image_base64=validated_args.location_image_base64,
+        prop_images_base64=validated_args.prop_images_base64,
+        aspect_ratio=validated_args.aspect_ratio,
+    )
+
+
 # =====================================================================
 # 5. Descriptores AgentTool Canónicos
 # =====================================================================
@@ -515,6 +540,18 @@ plot_hole_detector_tool = AgentTool(
     read_only=True,
 )
 
+storyboard_generator_tool = AgentTool(
+    name="generate_storyboard",
+    description="Genera viñetas de storyboard cinematográficas 16:9 con Google AI Studio y acondicionamiento multimodal (@personaje, @localizacion, @atrezzo).",
+    category="filmmaker",
+    version="1.0.0",
+    args_schema=StoryboardGeneratorArgs,
+    func=execute_generate_storyboard,
+    risk_level=RiskLevel.LOW,
+    tool_type=ToolType.OBSERVER,
+    read_only=True,
+)
+
 
 def get_filmmaker_tools() -> list[AgentTool]:
     """Retorna la lista ordenada de herramientas provistas por el plugin."""
@@ -523,4 +560,5 @@ def get_filmmaker_tools() -> list[AgentTool]:
         screenplay_formatter_tool,
         shot_breakdown_detector_tool,
         plot_hole_detector_tool,
+        storyboard_generator_tool,
     ]

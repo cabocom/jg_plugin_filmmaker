@@ -14,7 +14,7 @@ async def test_plugin_runner_integration():
         assert runner.metadata.name == "filmmaker"
         health = await runner.health_check()
         assert health["status"] == "ok"
-        assert health["tools_count"] == 4
+        assert health["tools_count"] == 5
 
         # Ejecución de treatment_structuring
         res_struct = runner.run_tool(

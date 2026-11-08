@@ -1,26 +1,45 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.4.0  
-**Fecha:** 18 de octubre de 2026  
+**Versión:** 2.5.0  
+**Fecha:** 8 de noviembre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
-**Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Pytest, Ruff  
-**Estado:** Totalmente implementado. Sincronización canónica con Biblia dramática de `jg_filmmaker` (ISSUE-012) y sanitización de `pinned_terms` (ISSUE-016: sustitución segura sin backreferences con lambda en `re.sub`, lookarounds adaptativos para símbolos como `C++` o `#1` y límites de seguridad). 18 tests unitarios pasando al 100% en CI/CD.
+**Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Httpx, Pytest, Ruff  
+**Estado:** Totalmente implementado. Incorporación de la herramienta canónica `generate_storyboard` para generación de viñetas de storyboard con Google AI Studio (`gemini-2.5-flash-image`) y acondicionamiento multimodal mediante etiquetas `@personaje`, `@localizacion` y `@Atrezzo1..3`. Desacoplamiento total de llamadas a la IA desde `jg_filmmaker`. 56 tests unitarios pasando al 100% en CI/CD y Ruff superado.
 
 ---
 
 ## 1. Visión y Propósito en el Ecosistema
 
-`jg_plugin_filmmaker` es un componente satélite desacoplado que dota al agente central `jg_agente` de capacidades especializadas para el análisis dramático, normalización de guiones y desglose de producción cinematográfica.
+`jg_plugin_filmmaker` es un componente satélite desacoplado que dota al agente central `jg_agente` de capacidades especializadas para el análisis dramático, normalización de guiones, desglose de producción y renderizado de storyboards cinematográficos.
 
 Actúa como backend de procesamiento cognitivo para la aplicación web `jg_filmmaker`:
 - **Aislamiento Total:** El plugin es un repositorio Python independiente. Tiene prohibido importar módulos internos de `jg_agente.app.*`.
 - **Contratos Canónicos:** Implementa estrictamente la interfaz `BasePlugin` y `AgentTool` definidas en `jg_sdk.contracts` (`jg-agente-sdk`).
-- **Nivel de Riesgo:** Todas las herramientas operan bajo `RiskLevel.LOW`, dado que son transformaciones puras de texto sin efectos secundarios destructivos en el sistema.
-- **Inferencia Semántica Dual:** Soporta inferencia cognitiva real conectando a la factoría de LLMs (`llm_client`) y degradación determinista offline (`is_mock_mode()`) cuando se ejecutan pruebas o no se suministra cliente LLM.
+- **Nivel de Riesgo:** Todas las herramientas operan bajo `RiskLevel.LOW`, dado que son transformaciones puras de texto o generación de artefactos visuales sin efectos secundarios destructivos en el sistema.
+- **Inferencia Semántica Dual:** Soporta inferencia cognitiva real conectando a la factoría de LLMs y a Google AI Studio, y degradación determinista offline (`is_mock_mode()`) cuando se ejecutan pruebas o no se suministran credenciales.
 
 ---
 
 ## 2. Catálogo de Herramientas y Esquemas Pydantic v2
+
+### 2.1. `generate_storyboard`
+- **Módulo:** `jg_plugin_filmmaker/storyboard.py`
+- **Propósito:** Genera viñetas de storyboard cinematográficas 16:9 conectando con Google AI Studio (`gemini-2.5-flash-image`) con acondicionamiento multimodal integral:
+  - Referencias cruzadas en el prompt mediante sintaxis `@` (ej. `@EDURNE`, `@CASA_ENTRADA`, `@Atrezzo1`).
+  - Imagen de modelo o turn-around de personaje en base64 (`character_image_base64`).
+  - Fotografía de localización o set de rodaje en base64 (`location_image_base64`).
+  - Hasta 3 imágenes de referencia para atrezzo u objetos del plano en base64 (`prop_images_base64`).
+  - Catálogo canónico de estilos: `grayscale_sketch` (boceto carboncillo noir), `kids_2d_animation` (animación clásica 2D) y `enki_bilal` (novela gráfica europea).
+- **Esquema de Entrada (`StoryboardGeneratorArgs`):**
+  - `prompt` (str): Prompt descriptivo del plano con etiquetas `@`.
+  - `style` (str): Clave canónica del estilo visual.
+  - `character_name` (str, opcional): Nombre del personaje.
+  - `character_image_base64` (str, opcional): Imagen base64 del personaje.
+  - `location_name` (str, opcional): Nombre de la localización.
+  - `location_image_base64` (str, opcional): Imagen base64 de la localización.
+  - `prop_images_base64` (list[str], opcional, máx 3): Imágenes base64 de objetos.
+  - `aspect_ratio` (str): `16:9` por defecto.
+- **Salida (`ToolResult`):** Artefacto visual con `image_base64`, `mime_type`, `final_prompt` y metadatos de auditoría.
 
 ### 2.1. `treatment_structuring`
 - **Módulo:** `jg_plugin_filmmaker/structuring.py`
