@@ -20,9 +20,7 @@ from jg_plugin_filmmaker.llm import is_mock_mode
 logger = logging.getLogger("jg_plugin_filmmaker.storyboard")
 
 # 1x1 dummy PNG para modo mock y pruebas offline seguras (consumo 0 tokens)
-DUMMY_PNG_BASE64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-)
+DUMMY_PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 
 CANONICAL_STYLES: dict[str, dict[str, str]] = {
     "grayscale_sketch": {
@@ -186,30 +184,36 @@ def generate_storyboard_image(
 
     # 1. Imagen del personaje
     if character_image_base64:
-        parts.append({
-            "inline_data": {
-                "mime_type": "image/png",
-                "data": character_image_base64,
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": "image/png",
+                    "data": character_image_base64,
+                }
             }
-        })
+        )
 
     # 2. Imagen de la localización
     if location_image_base64:
-        parts.append({
-            "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": location_image_base64,
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": "image/jpeg",
+                    "data": location_image_base64,
+                }
             }
-        })
+        )
 
     # 3. Imágenes de atrezzo (hasta 3)
     for prop_b64 in props:
-        parts.append({
-            "inline_data": {
-                "mime_type": "image/png",
-                "data": prop_b64,
+        parts.append(
+            {
+                "inline_data": {
+                    "mime_type": "image/png",
+                    "data": prop_b64,
+                }
             }
-        })
+        )
 
     # 4. Prompt de texto final
     parts.append({"text": final_prompt})
@@ -222,7 +226,11 @@ def generate_storyboard_image(
         response = http_client.post(endpoint, json=payload)
 
         if response.status_code != 200:
-            error_data = response.json() if "application/json" in response.headers.get("content-type", "") else {}
+            error_data = (
+                response.json()
+                if "application/json" in response.headers.get("content-type", "")
+                else {}
+            )
             err_msg = error_data.get("error", {}).get("message") or response.text
             logger.error("Error de Google AI Studio (%d): %s", response.status_code, err_msg)
             return ToolResult(

@@ -101,8 +101,10 @@ def test_storyboard_generator_tool_registration() -> None:
     assert storyboard_generator_tool.name == "generate_storyboard"
     assert storyboard_generator_tool.category == "filmmaker"
 
-    res = storyboard_generator_tool.func({
-        "prompt": "Test prompt @EDURNE",
-        "style": "grayscale_sketch",
-    })
+    res = storyboard_generator_tool.func(
+        {
+            "prompt": "Test prompt @EDURNE",
+            "style": "grayscale_sketch",
+        }
+    )
     assert res.success is True
