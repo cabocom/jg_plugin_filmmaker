@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.5.0  
+**Versión:** 2.6.0  
 **Fecha:** 8 de noviembre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Httpx, Pytest, Ruff  
-**Estado:** Totalmente implementado. Incorporación de la herramienta canónica `generate_storyboard` para generación de viñetas de storyboard con Google AI Studio (`gemini-2.5-flash-image`) y acondicionamiento multimodal mediante etiquetas `@personaje`, `@localizacion` y `@Atrezzo1..3`. Desacoplamiento total de llamadas a la IA desde `jg_filmmaker`. 56 tests unitarios pasando al 100% en CI/CD y Ruff superado.
+**Estado:** Totalmente implementado. Incorporación de las herramientas canónicas `extract_characters` y `audit_character_usage` para detección semántica híbrida de personajes (hablantes y mudos) con validación determinista de grounding textual y catálogo de stopwords técnicas de cine. 62 tests unitarios pasando al 100% en CI/CD y Ruff superado.
 
 ---
 
@@ -82,6 +82,22 @@ Actúa como backend de procesamiento cognitivo para la aplicación web `jg_filmm
 - **Salida (`ToolResult`):**
   - `metadata["detected_holes"]`: Lista de dicts `{"block_id": str, "reason": str}`.
   - `metadata["total_holes"]`: Entero con la cantidad de inconsistencias detectadas.
+
+### 2.5. `extract_characters`
+- **Módulo:** `jg_plugin_filmmaker/characters.py`
+- **Propósito:** Inferencia semántica con IA de entidades dramáticas reales presentes en el guion (tanto personajes con diálogo como personajes mudos/silentes que intervienen en la acción física), complementada con validación determinista de grounding textual y catálogo de stopwords técnicas de cine para descartar acotaciones de acción (*"mira a su alrededor"*) y efectos de sonido (*"sonido en off"*).
+- **Esquema de Entrada (`CharacterExtractionArgs`):**
+  - `text` (str): Fragmento de tratamiento o guion cinematográfico.
+  - `existing_characters` (list, opcional): Personajes preexistentes en la Biblia.
+- **Salida (`ToolResult`):** `metadata["characters"]` con nombre, rol, biografía, evidencia textual, si habla o es mudo, nivel de confianza y tipo de coincidencia (`consensus_strong`, `ai_grounded`, `deterministic_fallback`).
+
+### 2.6. `audit_character_usage`
+- **Módulo:** `jg_plugin_filmmaker/characters.py`
+- **Propósito:** Audita semánticamente si un nombre corresponde a un personaje dramático real en uso activo dentro de las escenas, o si por el contrario es un falso positivo léxico dentro de una acotación o frase verbal ordinaria.
+- **Esquema de Entrada (`CharacterAuditArgs`):**
+  - `character_name` (str): Nombre del personaje a auditar.
+  - `scene_texts` (list[str]): Fragmentos textuales de las escenas donde se audita la presencia.
+- **Salida (`ToolResult`):** `metadata["in_use"]` (bool), `metadata["is_dramatic_entity"]` (bool), `metadata["confidence"]` (float) y `metadata["reason"]` (str).
 
 ---
 

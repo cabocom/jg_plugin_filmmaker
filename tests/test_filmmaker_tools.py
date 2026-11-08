@@ -29,7 +29,7 @@ def test_plugin_metadata_and_registration():
     assert "plot_holes" in meta.tags
 
     tools = plugin.register_tools()
-    assert len(tools) == 5
+    assert len(tools) == 7
 
     tool_names = [t.name for t in tools]
     assert "treatment_structuring" in tool_names
@@ -37,6 +37,8 @@ def test_plugin_metadata_and_registration():
     assert "shot_breakdown_detector" in tool_names
     assert "plot_hole_detector" in tool_names
     assert "generate_storyboard" in tool_names
+    assert "extract_characters" in tool_names
+    assert "audit_character_usage" in tool_names
 
     for t in tools:
         assert t.risk_level == RiskLevel.LOW
@@ -188,7 +190,7 @@ def test_shot_breakdown_detector_canonical_syntax():
 def test_agent_tools_run_invocation():
     """Valida la ejecución de las herramientas a través del método AgentTool.run()."""
     all_tools = get_filmmaker_tools()
-    assert len(all_tools) == 5
+    assert len(all_tools) == 7
 
     # Invocación de treatment_structuring vía AgentTool
     res1 = treatment_structuring_tool.run(raw_text="Acción dramática de prueba.")
@@ -221,7 +223,7 @@ async def test_plugin_lifecycle_and_health():
     health = await plugin.health_check()
     assert health["status"] == "ok"
     assert health["plugin"] == "filmmaker"
-    assert health["tools_count"] == 5
+    assert health["tools_count"] == 7
 
     await plugin.shutdown()
     assert plugin._is_started is False

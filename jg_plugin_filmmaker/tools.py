@@ -14,6 +14,10 @@ from jg_sdk.contracts import AgentTool, RiskLevel, ToolResult, ToolType
 from pydantic import BaseModel, ConfigDict, Field
 
 from jg_plugin_filmmaker.breakdown import breakdown_screenplay_to_shots
+from jg_plugin_filmmaker.characters import (
+    audit_character_usage,
+    extract_characters,
+)
 from jg_plugin_filmmaker.formatting import format_screenplay
 from jg_plugin_filmmaker.plot_holes import detect_plot_holes
 from jg_plugin_filmmaker.storyboard import (
@@ -282,6 +286,43 @@ class PlotHoleDetectorArgs(BaseModel):
     )
 
 
+class CharacterExtractionArgs(BaseModel):
+    """Argumentos de entrada para la herramienta extract_characters."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    text: str = Field(
+        ...,
+        min_length=1,
+        max_length=50000,
+        description="Texto de tratamiento o guion cinematográfico a analizar.",
+    )
+    existing_characters: list[CharacterContext | dict[str, Any]] | None = Field(
+        default=None,
+        max_length=100,
+        description="Personajes previamente registrados en la Biblia.",
+    )
+
+
+class CharacterAuditArgs(BaseModel):
+    """Argumentos de entrada para la herramienta audit_character_usage."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    character_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=120,
+        description="Nombre del personaje a auditar en las escenas.",
+    )
+    scene_texts: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Textos de las escenas o bloques donde se audita la presencia real del personaje.",
+    )
+
+
 # =====================================================================
 # 4. Funciones Ejecutoras
 # =====================================================================
@@ -488,6 +529,65 @@ def execute_generate_storyboard(
     )
 
 
+def execute_extract_characters(
+    text: str,
+    existing_characters: list[CharacterContext | dict[str, Any]] | None = None,
+    llm_client: LLMClientProtocol | Any = None,
+    **kwargs: Any,
+) -> ToolResult:
+    """Extrae personajes dramáticos con análisis semántico y validación de grounding."""
+    try:
+        existing_data = [
+            c.model_dump() if isinstance(c, BaseModel) else c for c in (existing_characters or [])
+        ]
+        res = extract_characters(
+            text=text,
+            existing_characters=existing_data,
+            llm_client=llm_client,
+        )
+        return ToolResult(
+            success=True,
+            output=f"Extracción completada: {len(res['characters'])} personaje(s) identificado(s).",
+            metadata=res,
+        )
+    except Exception as e:
+        logger.exception("Fallo al extraer personajes con IA: %s", e)
+        return ToolResult(
+            success=False,
+            output="",
+            error=f"Fallo en extracción de personajes: {type(e).__name__}",
+            metadata={"error_code": "CHARACTER_EXTRACTION_ERROR"},
+        )
+
+
+def execute_audit_character_usage(
+    character_name: str,
+    scene_texts: list[str],
+    llm_client: LLMClientProtocol | Any = None,
+    **kwargs: Any,
+) -> ToolResult:
+    """Audita si un personaje interviene realmente como entidad dramática o si es un falso positivo léxico."""
+    try:
+        res = audit_character_usage(
+            character_name=character_name,
+            scene_texts=scene_texts,
+            llm_client=llm_client,
+        )
+        return ToolResult(
+            success=True,
+            output=f"Auditoría de '{character_name}': in_use={res.get('in_use', False)}",
+            metadata=res,
+        )
+    except Exception as e:
+        logger.exception("Fallo al auditar uso de personaje '%s': %s", character_name, e)
+        return ToolResult(
+            success=False,
+            output="",
+            error=f"Fallo en auditoría de personaje: {type(e).__name__}",
+            metadata={"error_code": "CHARACTER_AUDIT_ERROR"},
+        )
+
+
 # =====================================================================
 # 5. Descriptores AgentTool Canónicos
 # =====================================================================
@@ -552,6 +652,30 @@ storyboard_generator_tool = AgentTool(
     read_only=True,
 )
 
+extract_characters_tool = AgentTool(
+    name="extract_characters",
+    description="Extrae personajes dramáticos reales (parlantes o mudos) con IA y validación determinista de grounding.",
+    category="filmmaker",
+    version="1.0.0",
+    args_schema=CharacterExtractionArgs,
+    func=execute_extract_characters,
+    risk_level=RiskLevel.LOW,
+    tool_type=ToolType.OBSERVER,
+    read_only=True,
+)
+
+audit_character_usage_tool = AgentTool(
+    name="audit_character_usage",
+    description="Audita si un nombre corresponde a un personaje dramático real en uso o a un falso positivo léxico en acotaciones.",
+    category="filmmaker",
+    version="1.0.0",
+    args_schema=CharacterAuditArgs,
+    func=execute_audit_character_usage,
+    risk_level=RiskLevel.LOW,
+    tool_type=ToolType.OBSERVER,
+    read_only=True,
+)
+
 
 def get_filmmaker_tools() -> list[AgentTool]:
     """Retorna la lista ordenada de herramientas provistas por el plugin."""
@@ -561,4 +685,6 @@ def get_filmmaker_tools() -> list[AgentTool]:
         shot_breakdown_detector_tool,
         plot_hole_detector_tool,
         storyboard_generator_tool,
+        extract_characters_tool,
+        audit_character_usage_tool,
     ]
