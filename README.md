@@ -1,6 +1,23 @@
 > ⚠️ **Nota:** Este repositorio es un *mirror* público sincronizado automáticamente desde [GitLab](https://gitlab.com/javiergalvez-ia). El desarrollo activo, pipelines CI/CD, *issues* y discusiones técnicas se gestionan en https://gitlab.com/javiergalvez-ia
 
-# jg_plugin_filmmaker
+<div align="center">
+
+# 📽️ `jg_plugin_filmmaker`
+
+### Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`
+*Desglose de Producción, Detección de Personajes, Formateo Fountain y Storyboards*
+
+[![GitLab CI/CD](https://img.shields.io/badge/GitLab_CI-Pipeline_Passing-108548?style=flat-square&logo=gitlab&logoColor=white)](https://gitlab.com/javiergalvez-ia/jg_plugin_filmmaker)
+[![Mirror to GitHub](https://img.shields.io/badge/GitHub-Mirror_Active-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/cabocom/jg_plugin_filmmaker)
+[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![SDK](https://img.shields.io/badge/SDK-jg--agente--sdk-e92063?style=flat-square)](https://pypi.org/project/jg-agente-sdk/)
+[![Pydantic v2](https://img.shields.io/badge/Contracts-Pydantic_v2-e92063?style=flat-square&logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json&style=flat-square)](https://github.com/astral-sh/ruff)
+[![Tests](https://img.shields.io/badge/Tests-62_passing-success?style=flat-square&logo=pytest&logoColor=white)](#instalación-pruebas-y-enlace)
+
+</div>
+
+---
 
 **jg_plugin_filmmaker** es un plugin canónico de extensión satélite para el agente cognitivo `jg_agente`, desarrollado bajo la arquitectura modular del ecosistema `javiergalvez-ia`.
 
