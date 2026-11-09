@@ -1,3 +1,5 @@
+> ⚠️ **Nota:** Este repositorio es un *mirror* público sincronizado automáticamente desde [GitLab](https://gitlab.com/javiergalvez-ia). El desarrollo activo, pipelines CI/CD, *issues* y discusiones técnicas se gestionan en https://gitlab.com/javiergalvez-ia
+
 # jg_plugin_filmmaker
 
 **jg_plugin_filmmaker** es un plugin canónico de extensión satélite para el agente cognitivo `jg_agente`, desarrollado bajo la arquitectura modular del ecosistema `javiergalvez-ia`.
