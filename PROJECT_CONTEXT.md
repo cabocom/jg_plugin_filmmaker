@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.6.1  
-**Fecha:** 9 de noviembre de 2026  
+**Versión:** 2.7.0  
+**Fecha:** 12 de noviembre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Httpx, Pytest, Ruff  
-**Estado:** Totalmente implementado y sincronizado automáticamente como *mirror* público hacia `https://github.com/cabocom/jg_plugin_filmmaker` (`workspace#8`). Incorporación de las herramientas canónicas `extract_characters` y `audit_character_usage` para detección semántica híbrida de personajes (hablantes y mudos) con validación determinista de grounding textual y catálogo de stopwords técnicas de cine. 62 tests unitarios pasando al 100% en CI/CD y Ruff superado.
+**Estado:** Refactorización estructural v2.0 SOLID completada (jg_plugin_filmmaker#1). Modularización total de esquemas Pydantic v2 (`schemas/`), handlers ejecutores (`handlers/`), heurísticas de personajes (`character_heuristics.py`, `stopwords.py`) y formateo Fountain (`dialogue_refiner.py`). Todos los ficheros del paquete cumplen estrictamente el límite de <300 LOC y métodos <40 LOC con 100% de compatibilidad hacia atrás mediante re-exportaciones canónicas en `__all__`. Suite de 62 tests unitarios pasando al 100% en CI/CD y linters Ruff y MyPy superados sin fallos.
 
 ---
 
