@@ -1,65 +1,10 @@
 # ==============================================================================
-# Entorno autónomo y determinista para jg_plugin_filmmaker
-# Incluye Control Plane (Dashboard Laravel), Execution Plane (jg_agente) y PostgreSQL
+# Entorno autónomo desacoplado para pruebas de integración de jg_plugin_filmmaker
+# Arnés mínimo: Execution Plane (jg_agente) y PostgreSQL de Checkpointing
 # ==============================================================================
 services:
   # ============================================================================
-  # 1. Base de datos PostgreSQL para el Control Plane (Dashboard)
-  # ============================================================================
-  jg_dashboard_postgres:
-    image: postgres:16-alpine
-    container_name: jg_dashboard_postgres_filmmaker
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_DATABASE:-jg_dashboard}
-      POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: "${DB_PASSWORD:?Error: DB_PASSWORD requerida para PostgreSQL}"
-    volumes:
-      - jg_dashboard_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-jg_dashboard}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - jg_network
-
-  # ============================================================================
-  # 2. Panel Web de Control y Gobernanza HITL (Dashboard Laravel)
-  # ============================================================================
-  jg_dashboard:
-    image: registry.gitlab.com/javiergalvez-ia/jg_dashboard:latest
-    container_name: jg_dashboard_filmmaker
-    restart: unless-stopped
-    depends_on:
-      jg_dashboard_postgres:
-        condition: service_healthy
-    environment:
-      APP_NAME: "jG Dashboard - Filmmaker"
-      APP_ENV: ${APP_ENV:-local}
-      APP_KEY: "${APP_KEY:?Error: APP_KEY requerida}"
-      APP_DEBUG: ${APP_DEBUG:-false}
-      APP_URL: ${APP_URL:-http://localhost:8880}
-      DB_CONNECTION: pgsql
-      DB_HOST: jg_dashboard_postgres
-      DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE:-jg_dashboard}
-      DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: "${DB_PASSWORD:?Error: DB_PASSWORD requerida}"
-      JG_AGENTE_API_URL: http://jg_agente_filmmaker:8000
-      JG_AGENTE_SECRET: "${JG_AGENTE_SECRET:?Error: JG_AGENTE_SECRET requerida}"
-      JG_CONVERSATIONAL_SECRET: "${JG_AGENTE_SECRET:?Error: JG_AGENTE_SECRET requerida}"
-      JG_DEVOPS_SECRET: "${JG_AGENTE_SECRET:?Error: JG_AGENTE_SECRET requerida}"
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@local.test}
-      ADMIN_DEFAULT_PASSWORD: "${ADMIN_DEFAULT_PASSWORD:?Error: ADMIN_DEFAULT_PASSWORD requerida}"
-      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
-    ports:
-      - "${DASHBOARD_PORT:-8880}:8080"
-    networks:
-      - jg_network
-
-  # ============================================================================
-  # 3. Base de datos PostgreSQL para el Agente Cognitivo (Checkpointer / State)
+  # 1. Base de datos PostgreSQL para el Agente Cognitivo (Checkpointer / State)
   # ============================================================================
   jg_agente_postgres:
     image: postgres:16-alpine
@@ -80,7 +25,7 @@ services:
       - jg_network
 
   # ============================================================================
-  # 4. Agente Cognitivo con plugin jg_plugin_filmmaker montado
+  # 2. Agente Cognitivo con plugin jg_plugin_filmmaker montado
   # ============================================================================
   jg_agente_filmmaker:
     image: registry.gitlab.com/javiergalvez-ia/jg_agente:latest
@@ -103,9 +48,8 @@ services:
       POSTGRES_PASSWORD: "${JG_AGENTE_POSTGRES_PASSWORD:?Error: JG_AGENTE_POSTGRES_PASSWORD requerida}"
       POSTGRES_DB: ${JG_AGENTE_POSTGRES_DB:-jg_agente}
       DATABASE_URL: postgresql+asyncpg://${JG_AGENTE_POSTGRES_USER:-postgres}:${JG_AGENTE_POSTGRES_PASSWORD:?Error: JG_AGENTE_POSTGRES_PASSWORD requerida}@jg_agente_postgres:5432/${JG_AGENTE_POSTGRES_DB:-jg_agente}
-      DASHBOARD_URL: ${DASHBOARD_URL:-http://jg_dashboard:8080}
       VERIFY_CREDENTIALS_ON_BOOT: "false"
-      ENABLE_HEARTBEAT: "true"
+      ENABLE_HEARTBEAT: "false"
       LLM_PROVIDER: ${LLM_PROVIDER:-groq}
       LLM_MODEL: ${LLM_MODEL:-openai/gpt-oss-120b}
       LLM_API_KEY: ${GLOBAL_GROQ_API_KEY:-${GROQ_API_KEY:-}}
@@ -125,5 +69,4 @@ networks:
     driver: bridge
 
 volumes:
-  jg_dashboard_postgres_data:
   jg_agente_postgres_data:
