@@ -67,13 +67,14 @@ def detect_plot_holes(
             )
 
         blocks_summary = []
-        for b in blocks:
-            b_id = str(b.get("id", ""))
+        for idx, b in enumerate(blocks):
+            b_id = str(b.get("id", "") or f"block_{idx + 1}")
             b_text = str(
                 b.get("text")
                 or b.get("screenplay_content")
                 or b.get("structured_text")
                 or b.get("raw_text")
+                or b.get("content")
                 or ""
             ).strip()
             blocks_summary.append(f"[BLOQUE ID: {b_id}]\n{b_text}\n")
@@ -95,7 +96,10 @@ def detect_plot_holes(
                     holes = parsed.get("detected_holes", [])
                     if isinstance(holes, list):
                         valid_holes = []
-                        valid_ids = {str(b.get("id", "")) for b in blocks}
+                        valid_ids = {
+                            str(b.get("id", "") or f"block_{idx + 1}")
+                            for idx, b in enumerate(blocks)
+                        }
                         for h in holes:
                             if isinstance(h, dict) and str(h.get("block_id", "")) in valid_ids:
                                 valid_holes.append(
@@ -112,13 +116,14 @@ def detect_plot_holes(
     detected: list[dict[str, Any]] = []
     seen_alive_characters: dict[str, str] = {}  # nombre -> block_id
 
-    for b in blocks:
-        b_id = str(b.get("id", ""))
+    for idx, b in enumerate(blocks):
+        b_id = str(b.get("id", "") or f"block_{idx + 1}")
         b_text = str(
             b.get("text")
             or b.get("screenplay_content")
             or b.get("structured_text")
             or b.get("raw_text")
+            or b.get("content")
             or ""
         ).lower()
 

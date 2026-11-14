@@ -5,6 +5,7 @@ from jg_sdk.contracts import RiskLevel, ToolResult
 
 from jg_plugin_filmmaker.plugin import FilmmakerPlugin
 from jg_plugin_filmmaker.tools import (
+    PlotHoleDetectorArgs,
     execute_plot_hole_detector,
     execute_screenplay_formatter,
     execute_shot_breakdown_detector,
@@ -206,9 +207,55 @@ def test_agent_tools_run_invocation():
     assert "--- shot 1 (" in res3.output
 
     # Invocación de plot_hole_detector vía AgentTool
-    res4 = plot_hole_detector_tool.run(blocks=[{"id": "b1", "text": "Acción."}])
+    res4 = plot_hole_detector_tool.run(
+        blocks=[{"id": "b1", "text": "Marcus aparece de la nada en el tejado."}]
+    )
     assert res4.success is True
     assert res4.metadata["stage"] == "plot_holes"
+    assert res4.metadata["total_holes"] == 1
+    assert res4.metadata["detected_holes"][0]["block_id"] == "b1"
+
+
+def test_plot_hole_detector_pydantic_schema_preserves_id_and_text():
+    """Valida que PlotHoleDetectorArgs no destruye id, text, raw_text ni screenplay_content.
+
+    Reproduce y blinda la corrección de ISSUE-008 contra el stripping silencioso
+    de campos al validar contra el esquema Pydantic en tool_executor de jg_agente.
+    """
+    raw_payload = {
+        "blocks": [
+            {
+                "id": "block-uuid-42",
+                "scene_id": "scene-uuid-1",
+                "text": "Marcus aparece de la nada dentro de la cámara acorazada.",
+                "raw_text": "Marcus teletransporta sin explicación.",
+                "structured_text": "Marcus aparece repentinamente.",
+                "screenplay_content": "MARCUS aparece de la nada.",
+                "stage": "raw",
+            }
+        ],
+        "characters": [{"name": "Marcus", "bio": "Veterano melancólico."}],
+    }
+
+    # 1. Validación estricta con Pydantic v2
+    validated = PlotHoleDetectorArgs.model_validate(raw_payload)
+    block_item = validated.blocks[0]
+
+    assert block_item.id == "block-uuid-42"
+    assert block_item.text == "Marcus aparece de la nada dentro de la cámara acorazada."
+    assert block_item.raw_text == "Marcus teletransporta sin explicación."
+    assert block_item.structured_text == "Marcus aparece repentinamente."
+    assert block_item.screenplay_content == "MARCUS aparece de la nada."
+
+    # 2. Ejecución simulando tool_executor (usando kwargs validados y volcados con model_dump)
+    dumped_args = validated.model_dump()
+    result = plot_hole_detector_tool.run(**dumped_args)
+
+    assert result.success is True
+    assert result.metadata["total_holes"] == 1
+    assert len(result.metadata["detected_holes"]) == 1
+    assert result.metadata["detected_holes"][0]["block_id"] == "block-uuid-42"
+    assert "aparece de la nada" in result.metadata["detected_holes"][0]["reason"].lower()
 
 
 @pytest.mark.asyncio

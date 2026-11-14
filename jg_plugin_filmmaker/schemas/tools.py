@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from jg_plugin_filmmaker.schemas.context import (
     CharacterContext,
     LocationContext,
-    ScriptBlockItem,
+    PlotHoleBlockInput,
     UserLocksModel,
 )
 
@@ -82,7 +82,7 @@ class PlotHoleDetectorArgs(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    blocks: list[ScriptBlockItem] = Field(
+    blocks: list[PlotHoleBlockInput] = Field(
         ...,
         min_length=1,
         max_length=200,

@@ -14,6 +14,7 @@ from jg_plugin_filmmaker.plot_holes import detect_plot_holes
 from jg_plugin_filmmaker.schemas.context import (
     CharacterContext,
     LocationContext,
+    PlotHoleBlockInput,
     ScriptBlockItem,
 )
 from jg_plugin_filmmaker.schemas.protocols import LLMClientProtocol
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def execute_plot_hole_detector(
-    blocks: list[ScriptBlockItem | dict[str, Any]],
+    blocks: list[PlotHoleBlockInput | ScriptBlockItem | dict[str, Any]],
     characters: list[CharacterContext | dict[str, Any]] | None = None,
     locations: list[LocationContext | dict[str, Any]] | None = None,
     llm_client: LLMClientProtocol | Any = None,

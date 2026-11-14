@@ -129,22 +129,27 @@ class UserLocksModel(BaseModel):
 
 
 class ScriptBlockItem(BaseModel):
-    """Representación de un bloque de guion para análisis dramático."""
+    """Representación de un bloque de guion para análisis dramático y continuidad."""
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
 
+    id: str | None = Field(default=None, description="UUID o identificador del bloque")
+    text: str | None = Field(default=None, description="Texto consolidado del bloque")
+    raw_text: str | None = Field(default=None, description="Texto bruto original")
+    structured_text: str | None = Field(default=None, description="Tratamiento estructurado")
+    screenplay_content: str | None = Field(default=None, description="Contenido en formato guion")
+    content: str | None = Field(default=None, description="Contenido alternativo")
     type: str = Field(
         default="action",
         max_length=50,
         description="Tipo de bloque (action, dialogue, slugline, transition).",
-    )
-    content: str = Field(
-        default="",
-        max_length=10000,
-        description="Contenido textual del bloque dramático.",
     )
     character: str | None = Field(
         default=None,
         max_length=120,
         description="Nombre del personaje si es bloque de diálogo.",
     )
+
+
+class PlotHoleBlockInput(ScriptBlockItem):
+    """Bloque de entrada para detección de agujeros de guion y continuidad."""

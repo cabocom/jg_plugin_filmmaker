@@ -4,6 +4,7 @@ from jg_plugin_filmmaker.schemas.context import (
     CharacterContext,
     LocationContext,
     ManualDiffItem,
+    PlotHoleBlockInput,
     ScriptBlockItem,
     UserLocksModel,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "LLMClientProtocol",
     "LocationContext",
     "ManualDiffItem",
+    "PlotHoleBlockInput",
     "PlotHoleDetectorArgs",
     "ScreenplayFormatterArgs",
     "ScriptBlockItem",
