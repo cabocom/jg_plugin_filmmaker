@@ -172,6 +172,9 @@ Esto genera un enlace simbólico canónico en `jg_agente/plugins/jg_plugin_filmm
 - **Cobertura Exhaustiva y Paridad de Contratos Golden (ISSUE-042):**
   - Suite de 51 pruebas automatizadas cubriendo casos límite, Pydantic v2 estricto, backreferences, ReDoS y resiliencia.
   - Golden contract vectors compartidos (`contract_golden_vectors.json`) validados en Python y Laravel.
+- **Auditoría 2026-11-09 (ISSUE-008 y ISSUE-003):**
+  - ISSUE-008: Creación del esquema `PlotHoleBlockInput` con `extra="allow"` y herencia de `ScriptBlockItem` para preservar campos `id`, `text`, `raw_text`, `structured_text` y `screenplay_content` en `plot_hole_detector`.
+  - ISSUE-003: Implementación de `detect_image_mime()` en `storyboard.py` para autodetección dinámica de tipos MIME (`PNG`, `JPEG`, `WebP`) en imágenes base64 de personajes, localizaciones y atrezzo enviadas a Google AI Studio. Suite ampliada a **64 tests pasando al 100%**.
 
 
 

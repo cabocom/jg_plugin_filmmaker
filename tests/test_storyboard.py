@@ -6,6 +6,7 @@ from jg_plugin_filmmaker.storyboard import (
     DUMMY_PNG_BASE64,
     StoryboardGeneratorArgs,
     build_augmented_prompt,
+    detect_image_mime,
     generate_storyboard_image,
 )
 from jg_plugin_filmmaker.tools import storyboard_generator_tool
@@ -108,3 +109,27 @@ def test_storyboard_generator_tool_registration() -> None:
         }
     )
     assert res.success is True
+
+
+def test_detect_image_mime_types() -> None:
+    import base64
+
+    # PNG magic bytes
+    png_bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
+    assert detect_image_mime(base64.b64encode(png_bytes).decode()) == "image/png"
+
+    # JPEG magic bytes
+    jpeg_bytes = b"\xff\xd8\xff\xe0" + b"\x00" * 20
+    assert detect_image_mime(base64.b64encode(jpeg_bytes).decode()) == "image/jpeg"
+
+    # WebP magic bytes
+    webp_bytes = b"RIFF\x00\x00\x00\x00WEBPVP8 " + b"\x00" * 20
+    assert detect_image_mime(base64.b64encode(webp_bytes).decode()) == "image/webp"
+
+    # Data URI
+    assert detect_image_mime("data:image/webp;base64,AAAA") == "image/webp"
+    assert detect_image_mime("data:image/jpeg;base64,/9j/4AAQSkZJRg==") == "image/jpeg"
+
+    # Fallback
+    assert detect_image_mime("") == "image/png"
+    assert detect_image_mime("unknown_bytes") == "image/png"

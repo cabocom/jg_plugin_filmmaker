@@ -7,6 +7,7 @@ Permite renderizar viñetas cinemáticas 16:9 con soporte multimodal:
 - Selección de estilos artísticos canónicos (Escala de grises, Animación 2D, Enki Bilal).
 """
 
+import base64
 import logging
 import os
 from typing import Any
@@ -93,6 +94,31 @@ class StoryboardGeneratorArgs(BaseModel):
         default="16:9",
         description="Relación de aspecto cinematográfica.",
     )
+
+
+def detect_image_mime(base64_data: str) -> str:
+    """Detecta el tipo MIME de una imagen en base64 inspeccionando encabezado o magic bytes."""
+    if not base64_data:
+        return "image/png"
+
+    if base64_data.startswith("data:image/"):
+        header = base64_data.split(";")[0]
+        mime = header.replace("data:", "").strip()
+        if mime in ("image/jpeg", "image/png", "image/webp"):
+            return mime
+
+    try:
+        sample = base64.b64decode(base64_data[:64])
+        if sample.startswith(b"\xff\xd8\xff"):
+            return "image/jpeg"
+        if sample.startswith(b"\x89PNG\r\n\x1a\n"):
+            return "image/png"
+        if sample.startswith(b"RIFF") and b"WEBP" in sample[:16]:
+            return "image/webp"
+    except Exception:
+        pass
+
+    return "image/png"
 
 
 def build_augmented_prompt(
@@ -187,7 +213,7 @@ def generate_storyboard_image(
         parts.append(
             {
                 "inline_data": {
-                    "mime_type": "image/png",
+                    "mime_type": detect_image_mime(character_image_base64),
                     "data": character_image_base64,
                 }
             }
@@ -198,7 +224,7 @@ def generate_storyboard_image(
         parts.append(
             {
                 "inline_data": {
-                    "mime_type": "image/jpeg",
+                    "mime_type": detect_image_mime(location_image_base64),
                     "data": location_image_base64,
                 }
             }
@@ -209,7 +235,7 @@ def generate_storyboard_image(
         parts.append(
             {
                 "inline_data": {
-                    "mime_type": "image/png",
+                    "mime_type": detect_image_mime(prop_b64),
                     "data": prop_b64,
                 }
             }
