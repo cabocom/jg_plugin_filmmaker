@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.8.0  
+**Versión:** 2.9.0  
 **Fecha:** 14 de noviembre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Httpx, Pytest, Ruff  
-**Estado:** Corrección crítica de compatibilidad Pydantic v2 en `PlotHoleDetectorArgs` (AUDIT-20261109 / ISSUE-008 / jg_filmmaker#13). Se introdujo el modelo `PlotHoleBlockInput` con `extra="allow"` y retención explícita de `id`, `text`, `raw_text`, `structured_text`, `screenplay_content`, `content`, `type` y `character`, evitando el vaciado silencioso de bloques al validar esquemas en `tool_executor` de `jg_agente`. Todos los ficheros del paquete cumplen estrictamente el límite de <300 LOC y métodos <40 LOC con 100% de compatibilidad hacia atrás mediante re-exportaciones canónicas en `__all__`. Suite de 63 tests unitarios pasando al 100% en CI/CD y linters Ruff y MyPy superados sin fallos.
+**Estado:** Mitigación de seguridad y estabilidad HTTP en `generate_storyboard` (AUDIT-20261109 / ISSUE-007 / jg_filmmaker#12). Se eliminó la credencial `api_key` de la URL en peticiones a Google AI Studio inyectándola mediante la cabecera `x-goog-api-key`, se añadió validación de lista blanca para `base_url` previniendo SSRF y se aseguró el cierre determinista del cliente `httpx.Client` (`finally: http_client.close()`). Todos los ficheros del paquete cumplen estrictamente el límite de <300 LOC y métodos <40 LOC con 100% de compatibilidad hacia atrás mediante re-exportaciones canónicas en `__all__`. Suite de 66 tests unitarios pasando al 100% en CI/CD y linters Ruff y MyPy superados sin fallos.
 
 ---
 

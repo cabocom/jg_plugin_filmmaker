@@ -1,16 +1,10 @@
-"""Motor de generación de viñetas de storyboard con Google AI Studio para jg_plugin_filmmaker.
-
-Permite renderizar viñetas cinemáticas 16:9 con soporte multimodal:
-- Condicionamiento visual de personaje (turn-around) con referencias @personaje.
-- Condicionamiento visual de localización con referencias @localizacion.
-- Condicionamiento visual de hasta 3 objetos de atrezzo con referencias @atrezzo1, @atrezzo2, @atrezzo3.
-- Selección de estilos artísticos canónicos (Escala de grises, Animación 2D, Enki Bilal).
-"""
+"""Motor de generación de viñetas de storyboard con Google AI Studio para jg_plugin_filmmaker."""
 
 import base64
 import logging
 import os
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from jg_sdk.contracts import ToolResult
@@ -27,27 +21,17 @@ CANONICAL_STYLES: dict[str, dict[str, str]] = {
     "grayscale_sketch": {
         "name": "Escala de Grises",
         "badge": "Sketch B&W",
-        "modifier": (
-            "Cinematic production storyboard sketch, charcoal and graphite drawing, black and white tones, "
-            "dynamic lighting, film noir shading, rough crosshatching, rule of thirds composition, 35mm storyboard aspect ratio 16:9."
-        ),
+        "modifier": "Cinematic production storyboard sketch, charcoal and graphite drawing, black and white tones, dynamic lighting, film noir shading, rough crosshatching, rule of thirds composition, 35mm storyboard aspect ratio 16:9.",
     },
     "kids_2d_animation": {
         "name": "Animación 2D Infantil",
         "badge": "2D Infantil",
-        "modifier": (
-            "Vibrant 2D children's animated feature film still, clean vector linework, whimsical warm color palette, "
-            "soft cel shading, expressive character design, storybook aesthetic, high quality 2D animation, 16:9."
-        ),
+        "modifier": "Vibrant 2D children's animated feature film still, clean vector linework, whimsical warm color palette, soft cel shading, expressive character design, storybook aesthetic, high quality 2D animation, 16:9.",
     },
     "enki_bilal": {
         "name": "Enki Bilal",
         "badge": "Enki Bilal",
-        "modifier": (
-            "Graphic novel panel in the distinct art style of Enki Bilal, European bande dessinée, "
-            "textured chalk and oil pastel, gritty dystopian atmosphere, desaturated muted color palette with chalky blues and ochre, "
-            "weathered look, expressive melancholy gaze, cinematic sci-fi noir, 16:9."
-        ),
+        "modifier": "Graphic novel panel in the distinct art style of Enki Bilal, European bande dessinée, textured chalk and oil pastel, gritty dystopian atmosphere, desaturated muted color palette with chalky blues and ochre, weathered look, expressive melancholy gaze, cinematic sci-fi noir, 16:9.",
     },
 }
 
@@ -57,43 +41,14 @@ class StoryboardGeneratorArgs(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    prompt: str = Field(
-        ...,
-        min_length=3,
-        max_length=5000,
-        description="Prompt cinemático descriptivo de la viñeta, con soporte para etiquetas @personaje, @localizacion y @atrezzo.",
-    )
-    style: str = Field(
-        default="grayscale_sketch",
-        description="Estilo visual canónico (grayscale_sketch, kids_2d_animation, enki_bilal).",
-    )
-    character_name: str | None = Field(
-        default=None,
-        max_length=120,
-        description="Nombre del personaje principal referenciado en el prompt.",
-    )
-    character_image_base64: str | None = Field(
-        default=None,
-        description="Fotograma o turn-around del personaje en base64 para coherencia visual.",
-    )
-    location_name: str | None = Field(
-        default=None,
-        max_length=120,
-        description="Nombre de la localización o escenografía referenciada en el prompt.",
-    )
-    location_image_base64: str | None = Field(
-        default=None,
-        description="Fotografía o diseño de la localización en base64.",
-    )
-    prop_images_base64: list[str] = Field(
-        default_factory=list,
-        max_length=3,
-        description="Hasta 3 imágenes de objetos o atrezzo en base64.",
-    )
-    aspect_ratio: str = Field(
-        default="16:9",
-        description="Relación de aspecto cinematográfica.",
-    )
+    prompt: str = Field(..., min_length=3, max_length=5000, description="Prompt descriptivo con @personaje, @localizacion, @atrezzo.")
+    style: str = Field(default="grayscale_sketch", description="Estilo visual canónico.")
+    character_name: str | None = Field(default=None, max_length=120, description="Nombre del personaje principal.")
+    character_image_base64: str | None = Field(default=None, description="Fotograma o turn-around en base64.")
+    location_name: str | None = Field(default=None, max_length=120, description="Nombre de la localización.")
+    location_image_base64: str | None = Field(default=None, description="Foto o diseño de localización en base64.")
+    prop_images_base64: list[str] = Field(default_factory=list, max_length=3, description="Hasta 3 objetos de atrezzo en base64.")
+    aspect_ratio: str = Field(default="16:9", description="Relación de aspecto cinematográfica.")
 
 
 def detect_image_mime(base64_data: str) -> str:
@@ -206,6 +161,24 @@ def generate_storyboard_image(
     model = os.getenv("GOOGLE_AI_MODEL", "gemini-2.5-flash-image")
     timeout = float(os.getenv("GOOGLE_AI_TIMEOUT", "60.0"))
 
+    parsed_url = urlparse(base_url)
+    hostname = (parsed_url.hostname or "").lower()
+    is_valid_scheme = parsed_url.scheme in ("https", "http")
+    is_trusted_host = (
+        hostname in {"generativelanguage.googleapis.com"}
+        or hostname in {"127.0.0.1", "localhost", "testserver"}
+        or hostname.endswith(".test")
+    )
+
+    if not is_valid_scheme or not is_trusted_host:
+        logger.error("URL base de Google AI no confiable detectada: %s", base_url)
+        return ToolResult(
+            success=False,
+            output="",
+            error=f"URL base no permitida para Google AI Studio: {base_url}",
+            metadata={"error_code": "UNTRUSTED_BASE_URL"},
+        )
+
     parts: list[dict[str, Any]] = []
 
     # 1. Imagen del personaje
@@ -244,12 +217,21 @@ def generate_storyboard_image(
     # 4. Prompt de texto final
     parts.append({"text": final_prompt})
 
-    endpoint = f"{base_url.rstrip('/')}/models/{model}:generateContent?key={api_key}"
+    endpoint = f"{base_url.rstrip('/')}/models/{model}:generateContent"
     payload = {"contents": [{"parts": parts}]}
 
+    owns_client = client is None
+    http_client = client or httpx.Client(timeout=timeout)
+
     try:
-        http_client = client or httpx.Client(timeout=timeout)
-        response = http_client.post(endpoint, json=payload)
+        response = http_client.post(
+            endpoint,
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            },
+        )
 
         if response.status_code != 200:
             error_data = (
@@ -308,3 +290,6 @@ def generate_storyboard_image(
             error=f"Fallo en generación de storyboard: {type(e).__name__} - {e}",
             metadata={"error_code": "STORYBOARD_EXCEPTION"},
         )
+    finally:
+        if owns_client:
+            http_client.close()

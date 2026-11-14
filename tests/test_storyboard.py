@@ -1,6 +1,7 @@
 """Pruebas unitarias para la herramienta de generación de storyboard en jg_plugin_filmmaker."""
 
 import httpx
+import pytest
 
 from jg_plugin_filmmaker.storyboard import (
     DUMMY_PNG_BASE64,
@@ -133,3 +134,41 @@ def test_detect_image_mime_types() -> None:
     # Fallback
     assert detect_image_mime("") == "image/png"
     assert detect_image_mime("unknown_bytes") == "image/png"
+
+
+def test_generate_storyboard_sends_api_key_in_header_not_query_string() -> None:
+    captured_headers = {}
+    captured_url = ""
+
+    def mock_transport(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_headers, captured_url
+        captured_headers = dict(request.headers)
+        captured_url = str(request.url)
+        return httpx.Response(
+            status_code=200,
+            json={"candidates": [{"content": {"parts": [{"inlineData": {"data": "dummy_b64"}}]}}]},
+            headers={"content-type": "application/json"},
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(mock_transport))
+    result = generate_storyboard_image(
+        prompt="Test prompt",
+        api_key_override="secret_test_key_123",
+        client=client,
+    )
+
+    assert result.success is True
+    assert captured_headers.get("x-goog-api-key") == "secret_test_key_123"
+    assert "key=" not in captured_url
+
+
+def test_generate_storyboard_rejects_untrusted_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GOOGLE_AI_BASE_URL", "https://evil-attacker.com/v1beta")
+    result = generate_storyboard_image(
+        prompt="Test prompt",
+        api_key_override="secret_key",
+    )
+
+    assert result.success is False
+    assert result.metadata["error_code"] == "UNTRUSTED_BASE_URL"
+    assert "no permitida" in result.error
