@@ -39,15 +39,19 @@ def test_detect_plot_holes_deterministic_dead_character():
 def test_detect_plot_holes_with_llm_mock():
     """Valida la detección con cliente LLM activo simulado."""
     mock_llm = MagicMock()
-    fake_response = json.dumps({
-        "detected_holes": [
-            {"block_id": "blk_1", "reason": "Inconsistencia temporal grave entre noche y día."}
-        ]
-    })
+    fake_response = json.dumps(
+        {
+            "detected_holes": [
+                {"block_id": "blk_1", "reason": "Inconsistencia temporal grave entre noche y día."}
+            ]
+        }
+    )
     mock_llm.generate.return_value = fake_response
     mock_llm.invoke.return_value = fake_response
 
-    blocks = [{"id": "blk_1", "raw_text": "Es mediodía pero el cielo está completamente estrellado."}]
+    blocks = [
+        {"id": "blk_1", "raw_text": "Es mediodía pero el cielo está completamente estrellado."}
+    ]
     holes = detect_plot_holes(blocks, llm_client=mock_llm)
 
     assert len(holes) == 1

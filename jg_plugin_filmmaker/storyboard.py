@@ -41,13 +41,28 @@ class StoryboardGeneratorArgs(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    prompt: str = Field(..., min_length=3, max_length=5000, description="Prompt descriptivo con @personaje, @localizacion, @atrezzo.")
+    prompt: str = Field(
+        ...,
+        min_length=3,
+        max_length=5000,
+        description="Prompt descriptivo con @personaje, @localizacion, @atrezzo.",
+    )
     style: str = Field(default="grayscale_sketch", description="Estilo visual canónico.")
-    character_name: str | None = Field(default=None, max_length=120, description="Nombre del personaje principal.")
-    character_image_base64: str | None = Field(default=None, description="Fotograma o turn-around en base64.")
-    location_name: str | None = Field(default=None, max_length=120, description="Nombre de la localización.")
-    location_image_base64: str | None = Field(default=None, description="Foto o diseño de localización en base64.")
-    prop_images_base64: list[str] = Field(default_factory=list, max_length=3, description="Hasta 3 objetos de atrezzo en base64.")
+    character_name: str | None = Field(
+        default=None, max_length=120, description="Nombre del personaje principal."
+    )
+    character_image_base64: str | None = Field(
+        default=None, description="Fotograma o turn-around en base64."
+    )
+    location_name: str | None = Field(
+        default=None, max_length=120, description="Nombre de la localización."
+    )
+    location_image_base64: str | None = Field(
+        default=None, description="Foto o diseño de localización en base64."
+    )
+    prop_images_base64: list[str] = Field(
+        default_factory=list, max_length=3, description="Hasta 3 objetos de atrezzo en base64."
+    )
     aspect_ratio: str = Field(default="16:9", description="Relación de aspecto cinematográfica.")
 
 
