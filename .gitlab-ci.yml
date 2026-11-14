@@ -50,8 +50,8 @@ test:pytest:
     - python -m pip install --upgrade pip
     - pip install -e .[dev]
   script:
-    - echo "🧪 Ejecutando suite de tests unitarios de jg_plugin_filmmaker..."
-    - pytest tests/
+    - echo "🧪 Ejecutando suite de tests unitarios y verificación de cobertura de jg_plugin_filmmaker..."
+    - pytest --cov=jg_plugin_filmmaker --cov-fail-under=85 tests/
 
 # ==========================================
 # STAGE: BUILD (Empaquetado limpio sin ofuscación)

@@ -164,3 +164,40 @@ def test_tool_execution_parity():
     )
     assert audit_res.success is True
     assert audit_res.metadata["in_use"] is False
+
+
+def test_audit_character_usage_empty_name_and_mock_llm():
+    """Valida casos borde de audit_character_usage: nombre vacío y mock de LLM."""
+    # 1. Nombre vacío
+    empty_res = audit_character_usage("   ", ["Algún texto"])
+    assert empty_res["in_use"] is False
+    assert "vacío" in empty_res["reason"]
+
+    # 2. Mock LLM activo
+    mock_llm = MockLLMClient(
+        '{"in_use": true, "is_dramatic_entity": true, "confidence": 0.99, "reason": "Sujeto dramático confirmado por IA"}'
+    )
+    llm_res = audit_character_usage("Marcus", ["Marcus observa la bahía."], llm_client=mock_llm)
+    assert llm_res["in_use"] is True
+    assert llm_res["confidence"] == 0.99
+    assert "confirmado por IA" in llm_res["reason"]
+
+
+def test_extract_characters_ai_consensus_merging():
+    """Valida la combinación por consenso de candidatos detectados por IA y deterministas."""
+    text = "MARCUS\nDebemos zarpar hoy mismo.\n\nEL CAPITÁN asiente con firmeza."
+    ai_json = (
+        '{"characters": ['
+        '{"name": "Marcus", "role": "Protagonista", "is_speaking": true, "bio": "Líder", "evidence": "Debemos zarpar"},'
+        '{"name": "El Capitán", "role": "Secundario", "is_speaking": false, "bio": "Oficial", "evidence": "asiente"}'
+        "]}"
+    )
+    mock_llm = MockLLMClient(ai_json)
+    result = extract_characters(text, llm_client=mock_llm)
+    chars = result["characters"]
+
+    assert len(chars) >= 2
+    marcus = next((c for c in chars if c["name"].lower() == "marcus"), None)
+    assert marcus is not None
+    assert marcus["match_type"] == "consensus_strong"
+    assert marcus["confidence"] == 0.99

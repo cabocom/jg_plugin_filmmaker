@@ -27,14 +27,14 @@ DIRECTRICES Y REGLAS ESTRICTAS:
 {locations_context}
 4. FORMATO DE SALIDA:
    Devuelve ÚNICAMENTE un objeto JSON válido con la siguiente estructura, sin texto adicional, prefacios ni comentarios:
-   {
+   {{
      "detected_holes": [
-       {
+       {{
          "block_id": "identificador_del_bloque",
          "reason": "Explicación concisa y técnica de la inconsistencia dramática."
-       }
+       }}
      ]
-   }
+   }}
 """
 
 
