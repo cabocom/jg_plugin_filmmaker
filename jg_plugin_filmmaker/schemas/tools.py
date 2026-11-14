@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from jg_plugin_filmmaker.schemas.context import (
     CharacterContext,
@@ -36,6 +36,14 @@ class TreatmentStructuringArgs(BaseModel):
         default=None,
         description="Directivas, manual diffs y términos fijados por el usuario a preservar.",
     )
+    api_key: SecretStr | None = Field(
+        default=None,
+        description="Clave de API opcional para proveedor LLM (Bring Your Own Key).",
+    )
+    provider: str | None = Field(
+        default=None,
+        description="Identificador opcional del proveedor cognitivo (google, groq, openai).",
+    )
 
 
 class ScreenplayFormatterArgs(BaseModel):
@@ -61,6 +69,14 @@ class ScreenplayFormatterArgs(BaseModel):
     user_locks: UserLocksModel | None = Field(
         default=None,
         description="Términos fijados y bloqueos manuales a preservar en el guión.",
+    )
+    api_key: SecretStr | None = Field(
+        default=None,
+        description="Clave de API opcional para proveedor LLM (Bring Your Own Key).",
+    )
+    provider: str | None = Field(
+        default=None,
+        description="Identificador opcional del proveedor cognitivo (google, groq, openai).",
     )
 
 

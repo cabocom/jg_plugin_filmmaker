@@ -35,6 +35,7 @@ def execute_treatment_structuring(
     location_context: LocationContext | dict[str, Any] | None = None,
     user_locks: UserLocksModel | dict[str, Any] | None = None,
     llm_client: LLMClientProtocol | Any = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Ejecuta la estructuración del tratamiento respetando los candados del usuario."""
     try:
@@ -83,6 +84,7 @@ def execute_screenplay_formatter(
     location_context: LocationContext | dict[str, Any] | None = None,
     user_locks: UserLocksModel | dict[str, Any] | None = None,
     llm_client: LLMClientProtocol | Any = None,
+    **kwargs: Any,
 ) -> ToolResult:
     """Ejecuta la conversión a guión literario Fountain respetando user_locks."""
     try:
