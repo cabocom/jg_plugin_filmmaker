@@ -97,8 +97,9 @@ def get_active_llm(
         try:
             if prov == "groq":
                 from langchain_groq import ChatGroq
+                from pydantic import SecretStr
 
-                return ChatGroq(api_key=api_key_str)
+                return ChatGroq(model="llama-3.3-70b-versatile", api_key=SecretStr(api_key_str))
             if prov in ("openai", "custom"):
                 from langchain_openai import ChatOpenAI
 
@@ -143,6 +144,7 @@ def invoke_llm_text(
     _configure_client_timeout(llm, timeout)
 
     # Construir mensajes agnósticos (LangChain o dicts estándar)
+    messages: list[Any]
     try:
         from langchain_core.messages import HumanMessage, SystemMessage
 
