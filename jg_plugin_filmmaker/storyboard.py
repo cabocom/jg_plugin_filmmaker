@@ -156,20 +156,26 @@ def generate_storyboard_image(
 
     api_key = api_key_override or os.getenv("GOOGLE_AI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
-    # Si estamos en modo mock (sin override de API key) o sin API key, fail-closed con dummy PNG
-    if (is_mock_mode() and not api_key_override) or not api_key:
-        logger.info("Modo mock o sin API Key: retornando viñeta determinista offline.")
+    if not api_key:
+        if is_mock_mode() and not api_key_override:
+            logger.info("Modo mock offline en testing: retornando viñeta determinista.")
+            return ToolResult(
+                success=True,
+                output="Viñeta de storyboard generada exitosamente en modo offline/mock.",
+                metadata={
+                    "image_base64": DUMMY_PNG_BASE64,
+                    "mime_type": "image/png",
+                    "final_prompt": final_prompt,
+                    "style": style,
+                    "aspect_ratio": aspect_ratio,
+                    "source": "deterministic_mock",
+                },
+            )
         return ToolResult(
-            success=True,
-            output="Viñeta de storyboard generada exitosamente en modo offline/mock.",
-            metadata={
-                "image_base64": DUMMY_PNG_BASE64,
-                "mime_type": "image/png",
-                "final_prompt": final_prompt,
-                "style": style,
-                "aspect_ratio": aspect_ratio,
-                "source": "deterministic_mock",
-            },
+            success=False,
+            output="",
+            error="Falta la credencial requerida (GOOGLE_AI_API_KEY o GEMINI_API_KEY) para generar la viñeta.",
+            metadata={"error_code": "MISSING_API_KEY"},
         )
 
     base_url = os.getenv("GOOGLE_AI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta")

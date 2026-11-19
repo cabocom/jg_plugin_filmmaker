@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.10.0  
-**Fecha:** 14 de noviembre de 2026  
+**Versión:** 2.11.0  
+**Fecha:** 19 de noviembre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Httpx, Pytest, Ruff  
-**Estado:** Soporte de esquemas BYOK seguros con `SecretStr` (AUDIT-20261109 / ISSUE-020 / jg_filmmaker#25). Se añadieron campos opcionales `api_key: SecretStr` y `provider: str` a `TreatmentStructuringArgs` y `ScreenplayFormatterArgs` previniendo la exposición accidental de secretos en serializaciones y volcados. Todos los ficheros del paquete cumplen estrictamente el límite de <300 LOC y métodos <40 LOC con 100% de compatibilidad hacia atrás. Suite completa de 73 tests unitarios e integrados pasando al 100% con 86.26% de cobertura y linter Ruff sin fallos.
+**Estado:** Endurecimiento Anti-Fallback y Fail-Loud en Inferencia LLM (ISSUE-12 / jg_plugin_filmmaker#2). Se eliminó la activación implícita de `is_mock_mode()` por ausencia de API keys. `invoke_llm_text()` propaga excepciones estrictas (`RuntimeError`, `TimeoutError`) ante caídas o timeouts de inferencia. Las 7 herramientas cognitivas del plugin fallan ruidosamente devolviendo `ToolResult(success=False, error=...)` ante fallos de LLM o falta de credenciales en modo real, erradicando fallbacks heurísticos silenciosos y el uso de imágenes PNG sintéticas en producción. Suite completa de 75 tests pasando al 100% y ruff limpio.
 
 ---
 

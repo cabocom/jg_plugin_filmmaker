@@ -10,10 +10,11 @@ from typing import Any
 from jg_plugin_filmmaker.character_heuristics import (
     CINEMATIC_STOPWORDS,
     deterministic_extract_candidates,
+    fallback_audit_decision,
     is_cinematic_stopword,
     verify_textual_grounding,
 )
-from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
+from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text, is_mock_mode
 
 logger = logging.getLogger(__name__)
 
@@ -92,24 +93,27 @@ def _query_llm_characters(active_llm: Any, text: str) -> list[dict[str, Any]]:
     """Consulta al LLM e interpreta candidatos a personajes."""
     user_prompt = f"FRAGMENTO NARRATIVO / GUION:\n{text.strip()}"
     output = invoke_llm_text(active_llm, CHARACTER_EXTRACTION_SYSTEM_PROMPT, user_prompt)
-    if not output:
-        return []
+    if not output or not output.strip():
+        raise RuntimeError("El modelo LLM retornó una respuesta vacía en extracción de personajes.")
+
+    json_match = re.search(r"\{.*\}", output, re.DOTALL)
+    if not json_match:
+        raise RuntimeError("La salida del LLM no contiene un objeto JSON válido.")
+    try:
+        parsed = json.loads(json_match.group(0))
+    except Exception as e:
+        raise RuntimeError(f"Error parseando JSON de personajes del LLM: {e}") from e
+
+    raw_chars = parsed.get("characters", [])
+    if not isinstance(raw_chars, list):
+        raise RuntimeError("Formato inválido de characters en respuesta del LLM.")
 
     candidates: list[dict[str, Any]] = []
-    try:
-        json_match = re.search(r"\{.*\}", output, re.DOTALL)
-        if json_match:
-            parsed = json.loads(json_match.group(0))
-            raw_chars = parsed.get("characters", [])
-            if isinstance(raw_chars, list):
-                for c in raw_chars:
-                    if isinstance(c, dict):
-                        cand = _parse_ai_character_candidate(c, text)
-                        if cand:
-                            candidates.append(cand)
-    except Exception as e:
-        logger.error("Error parseando respuesta JSON de IA en extract_characters: %s", e)
-
+    for c in raw_chars:
+        if isinstance(c, dict):
+            cand = _parse_ai_character_candidate(c, text)
+            if cand:
+                candidates.append(cand)
     return candidates
 
 
@@ -168,7 +172,12 @@ def extract_characters(
 
     deterministic_candidates = deterministic_extract_candidates(text)
     active_llm = get_active_llm(llm_client)
-    ai_candidates = _query_llm_characters(active_llm, text) if active_llm is not None else []
+    if active_llm is not None:
+        ai_candidates = _query_llm_characters(active_llm, text)
+    elif is_mock_mode():
+        ai_candidates = []
+    else:
+        raise RuntimeError("No hay cliente LLM disponible ni entorno mock habilitado.")
 
     final_characters, strategy = _merge_consensus_characters(
         ai_candidates, deterministic_candidates
@@ -188,61 +197,28 @@ def extract_characters(
     }
 
 
-def _query_llm_audit(active_llm: Any, char_name: str, combined_text: str) -> dict[str, Any] | None:
+def _query_llm_audit(active_llm: Any, char_name: str, combined_text: str) -> dict[str, Any]:
     """Ejecuta la desambiguación semántica del personaje mediante el LLM."""
     user_prompt = (
         f"PERSONAJE A AUDITAR: {char_name}\n\nTEXTO DEL GUION / ESCENAS:\n{combined_text[:4000]}"
     )
     output = invoke_llm_text(active_llm, CHARACTER_AUDIT_SYSTEM_PROMPT, user_prompt)
-    if not output:
-        return None
+    if not output or not output.strip():
+        raise RuntimeError("El modelo LLM retornó una respuesta vacía en auditoría de personaje.")
 
+    json_match = re.search(r"\{.*\}", output, re.DOTALL)
+    if not json_match:
+        raise RuntimeError("La respuesta del LLM no contiene un JSON válido.")
     try:
-        json_match = re.search(r"\{.*\}", output, re.DOTALL)
-        if json_match:
-            parsed = json.loads(json_match.group(0))
-            return {
-                "in_use": bool(parsed.get("in_use", False)),
-                "is_dramatic_entity": bool(parsed.get("is_dramatic_entity", False)),
-                "confidence": float(parsed.get("confidence", 0.90)),
-                "reason": str(parsed.get("reason", "Auditoría semántica completada.")),
-            }
+        parsed = json.loads(json_match.group(0))
     except Exception as e:
-        logger.error("Error parseando respuesta JSON de IA en audit_character_usage: %s", e)
-
-    return None
-
-
-def _fallback_audit_decision(char_name: str, combined_text: str) -> dict[str, Any]:
-    """Determina si el personaje está en uso según heurísticas deterministas seguras."""
-    dialogue_pattern = rf"^[ \t]*{re.escape(char_name)}(?:\s*\(.*?\))?:?$"
-    has_dialogue = bool(re.search(dialogue_pattern, combined_text, re.MULTILINE | re.IGNORECASE))
-
-    words = char_name.split()
-    is_common_phrase = len(words) >= 3 and any(
-        w.lower() in {"a", "su", "en", "de", "con", "por", "el", "la"} for w in words
-    )
-
-    if has_dialogue:
-        return {
-            "in_use": True,
-            "is_dramatic_entity": True,
-            "confidence": 0.85,
-            "reason": f"'{char_name}' aparece como interlocutor directo de diálogo en el texto.",
-        }
-    if is_common_phrase:
-        return {
-            "in_use": False,
-            "is_dramatic_entity": False,
-            "confidence": 0.80,
-            "reason": f"'{char_name}' es una locución o frase descriptiva común, no un personaje dramático.",
-        }
+        raise RuntimeError(f"Error parseando JSON de auditoría de personajes del LLM: {e}") from e
 
     return {
-        "in_use": True,
-        "is_dramatic_entity": True,
-        "confidence": 0.70,
-        "reason": f"'{char_name}' aparece mencionado en la acción narrativa.",
+        "in_use": bool(parsed.get("in_use", False)),
+        "is_dramatic_entity": bool(parsed.get("is_dramatic_entity", False)),
+        "confidence": float(parsed.get("confidence", 0.90)),
+        "reason": str(parsed.get("reason", "Auditoría semántica completada.")),
     }
 
 
@@ -282,11 +258,12 @@ def audit_character_usage(
 
     active_llm = get_active_llm(llm_client)
     if active_llm is not None:
-        llm_res = _query_llm_audit(active_llm, char_name, combined_text)
-        if llm_res is not None:
-            return llm_res
+        return _query_llm_audit(active_llm, char_name, combined_text)
 
-    return _fallback_audit_decision(char_name, combined_text)
+    if is_mock_mode():
+        return fallback_audit_decision(char_name, combined_text)
+
+    raise RuntimeError("No hay cliente LLM disponible ni entorno mock habilitado.")
 
 
 __all__ = [

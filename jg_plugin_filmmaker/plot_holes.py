@@ -10,7 +10,7 @@ import json
 import re
 from typing import Any
 
-from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
+from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text, is_mock_mode
 
 PLOT_HOLE_SYSTEM_PROMPT = """Eres un Analista Dramático y Script Doctor cinematográfico profesional de alto nivel.
 Tu misión es auditar una secuencia ordenada de bloques de un guión o tratamiento y detectar AGUJEROS ARGUMENTALES O DE CONTINUIDAD GENUINOS (plot holes).
@@ -87,69 +87,77 @@ def detect_plot_holes(
         )
 
         output = invoke_llm_text(active_llm, sys_prompt, user_prompt)
-        if output:
-            try:
-                # Extraer bloque json si viene con backticks
-                json_match = re.search(r"\{.*\}", output, re.DOTALL)
-                if json_match:
-                    parsed = json.loads(json_match.group(0))
-                    holes = parsed.get("detected_holes", [])
-                    if isinstance(holes, list):
-                        valid_holes = []
-                        valid_ids = {
-                            str(b.get("id", "") or f"block_{idx + 1}")
-                            for idx, b in enumerate(blocks)
-                        }
-                        for h in holes:
-                            if isinstance(h, dict) and str(h.get("block_id", "")) in valid_ids:
-                                valid_holes.append(
-                                    {
-                                        "block_id": str(h["block_id"]),
-                                        "reason": str(h.get("reason", "Inconsistencia dramática")),
-                                    }
-                                )
-                        return valid_holes
-            except Exception:
-                pass
-
-    # --- MOTOR DETERMINISTA HEURÍSTICO (Fallback offline / test) ---
-    detected: list[dict[str, Any]] = []
-    seen_alive_characters: dict[str, str] = {}  # nombre -> block_id
-
-    for idx, b in enumerate(blocks):
-        b_id = str(b.get("id", "") or f"block_{idx + 1}")
-        b_text = str(
-            b.get("text")
-            or b.get("screenplay_content")
-            or b.get("structured_text")
-            or b.get("raw_text")
-            or b.get("content")
-            or ""
-        ).lower()
-
-        # 1. Regla: Incoherencia de teletransportación o contradicción flagrante explícita
-        if "teletransporta" in b_text or "aparece de la nada" in b_text:
-            detected.append(
-                {
-                    "block_id": b_id,
-                    "reason": "Ruptura de continuidad espacial: personaje aparece de la nada sin justificación de tránsito.",
-                }
+        if not output or not output.strip():
+            raise RuntimeError(
+                "El modelo LLM retornó una respuesta vacía en detección de agujeros."
             )
+        json_match = re.search(r"\{.*\}", output, re.DOTALL)
+        if not json_match:
+            raise RuntimeError("La salida del LLM no contiene un objeto JSON válido.")
+        try:
+            parsed = json.loads(json_match.group(0))
+        except Exception as e:
+            raise RuntimeError(f"Error parseando JSON de agujeros dramáticos del LLM: {e}") from e
+        holes = parsed.get("detected_holes", [])
+        if not isinstance(holes, list):
+            raise RuntimeError("Formato inválido de detected_holes en respuesta del LLM.")
+        valid_holes = []
+        valid_ids = {str(b.get("id", "") or f"block_{idx + 1}") for idx, b in enumerate(blocks)}
+        for h in holes:
+            if isinstance(h, dict) and str(h.get("block_id", "")) in valid_ids:
+                valid_holes.append(
+                    {
+                        "block_id": str(h["block_id"]),
+                        "reason": str(h.get("reason", "Inconsistencia dramática")),
+                    }
+                )
+        return valid_holes
 
-        # 2. Regla: Personaje que muere y luego dialoga o reaparece vivo
-        if "muere" in b_text or "fallece" in b_text or "cadáver" in b_text:
-            for c in characters or []:
-                c_name = str(c.get("name", "")).lower()
-                if c_name and c_name in b_text:
-                    seen_alive_characters[c_name] = "dead"
+    if is_mock_mode():
+        # --- MOTOR DETERMINISTA HEURÍSTICO (Modo Test / Offline) ---
+        detected: list[dict[str, Any]] = []
+        seen_alive_characters: dict[str, str] = {}  # nombre -> block_id
 
-        for c_name, status in seen_alive_characters.items():
-            if status == "dead" and c_name in b_text and ("camina" in b_text or "dice" in b_text):
+        for idx, b in enumerate(blocks):
+            b_id = str(b.get("id", "") or f"block_{idx + 1}")
+            b_text = str(
+                b.get("text")
+                or b.get("screenplay_content")
+                or b.get("structured_text")
+                or b.get("raw_text")
+                or b.get("content")
+                or ""
+            ).lower()
+
+            # 1. Regla: Incoherencia de teletransportación o contradicción flagrante explícita
+            if "teletransporta" in b_text or "aparece de la nada" in b_text:
                 detected.append(
                     {
                         "block_id": b_id,
-                        "reason": f"Agujero dramático crítico: el personaje '{c_name.capitalize()}' falleció en una escena anterior pero interviene activamente.",
+                        "reason": "Ruptura de continuidad espacial: personaje aparece de la nada sin justificación de tránsito.",
                     }
                 )
 
-    return detected
+            # 2. Regla: Personaje que muere y luego dialoga o reaparece vivo
+            if "muere" in b_text or "fallece" in b_text or "cadáver" in b_text:
+                for c in characters or []:
+                    c_name = str(c.get("name", "")).lower()
+                    if c_name and c_name in b_text:
+                        seen_alive_characters[c_name] = "dead"
+
+            for c_name, status in seen_alive_characters.items():
+                if (
+                    status == "dead"
+                    and c_name in b_text
+                    and ("camina" in b_text or "dice" in b_text)
+                ):
+                    detected.append(
+                        {
+                            "block_id": b_id,
+                            "reason": f"Agujero dramático crítico: el personaje '{c_name.capitalize()}' falleció en una escena anterior pero interviene activamente.",
+                        }
+                    )
+
+        return detected
+
+    raise RuntimeError("No hay cliente LLM disponible ni entorno mock habilitado.")

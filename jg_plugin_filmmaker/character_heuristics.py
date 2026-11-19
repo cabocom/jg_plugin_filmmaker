@@ -133,3 +133,45 @@ def deterministic_extract_candidates(source_text: str) -> list[dict[str, Any]]:
     _match_roles_with_articles(source_text, candidates, seen)
 
     return candidates
+
+
+def fallback_audit_decision(char_name: str, combined_text: str) -> dict[str, Any]:
+    """Determina si el personaje está en uso según heurísticas deterministas seguras."""
+    dialogue_pattern = rf"^[ \t]*{re.escape(char_name)}(?:\s*\(.*?\))?:?$"
+    has_dialogue = bool(re.search(dialogue_pattern, combined_text, re.MULTILINE | re.IGNORECASE))
+
+    words = char_name.split()
+    is_common_phrase = len(words) >= 3 and any(
+        w.lower() in {"a", "su", "en", "de", "con", "por", "el", "la"} for w in words
+    )
+
+    if has_dialogue:
+        return {
+            "in_use": True,
+            "is_dramatic_entity": True,
+            "confidence": 0.85,
+            "reason": f"'{char_name}' aparece como interlocutor directo de diálogo en el texto.",
+        }
+    if is_common_phrase:
+        return {
+            "in_use": False,
+            "is_dramatic_entity": False,
+            "confidence": 0.80,
+            "reason": f"'{char_name}' es una locución o frase descriptiva común, no un personaje dramático.",
+        }
+
+    return {
+        "in_use": True,
+        "is_dramatic_entity": True,
+        "confidence": 0.70,
+        "reason": f"'{char_name}' aparece mencionado en la acción narrativa.",
+    }
+
+
+__all__ = [
+    "CINEMATIC_STOPWORDS",
+    "deterministic_extract_candidates",
+    "fallback_audit_decision",
+    "is_cinematic_stopword",
+    "verify_textual_grounding",
+]

@@ -33,18 +33,7 @@ def is_mock_mode() -> bool:
     if "PYTEST_CURRENT_TEST" in os.environ or os.getenv("CI") == "true":
         return os.getenv("FORCE_REAL_LLM", "").lower().strip() != "true"
 
-    # 3. Principio Fail-Closed: si no hay credenciales de ningún proveedor cognitivo, forzar mock
-    has_api_key = any(
-        os.getenv(k)
-        for k in (
-            "GROQ_API_KEY",
-            "OPENAI_API_KEY",
-            "ANTHROPIC_API_KEY",
-            "GEMINI_API_KEY",
-            "MISTRAL_API_KEY",
-        )
-    )
-    return not has_api_key
+    return False
 
 
 def get_active_llm(override_llm: Any = None) -> Any | None:
@@ -84,7 +73,7 @@ def invoke_llm_text(
     system_prompt: str,
     user_prompt: str,
     timeout: float = 30.0,
-) -> str | None:
+) -> str:
     """Invoca el LLM con timeout estricto tolerando múltiples interfaces.
 
     Args:
@@ -94,90 +83,85 @@ def invoke_llm_text(
         timeout: Límite máximo en segundos antes de abortar la inferencia.
 
     Returns:
-        Texto resultante generado por el LLM o None si hubo fallo/timeout.
+        Texto resultante generado por el LLM.
+
+    Raises:
+        RuntimeError: Si llm es None, inválido o falla la llamada.
+        TimeoutError: Si la inferencia excede el tiempo límite establecido.
     """
     if llm is None:
-        return None
+        raise RuntimeError("No se ha configurado ni suministrado un cliente LLM válido.")
 
+    # Construir mensajes agnósticos (LangChain o dicts estándar)
     try:
-        # Construir mensajes agnósticos (LangChain o dicts estándar)
-        messages: list[Any]
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+    except ImportError:
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+    def _run_sync_invoke() -> str:
+        response = llm.invoke(messages)
+        if hasattr(response, "content"):
+            return str(response.content).strip()
+        return str(response).strip()
+
+    if hasattr(llm, "invoke"):
+        future = _LLM_EXECUTOR.submit(_run_sync_invoke)
         try:
-            from langchain_core.messages import HumanMessage, SystemMessage
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError as exc:
+            logger.error("Timeout (%ss) al invocar LLM síncrono.", timeout)
+            raise TimeoutError(
+                f"Timeout ({timeout}s) agotado durante la inferencia con LLM."
+            ) from exc
+        except Exception as exc:
+            logger.error("Error al invocar LLM síncrono (%s): %s", type(exc).__name__, exc)
+            raise
 
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt),
-            ]
-        except ImportError:
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ]
+    if hasattr(llm, "ainvoke"):
 
-        def _run_sync_invoke() -> str:
-            response = llm.invoke(messages)
-            if hasattr(response, "content"):
-                return str(response.content).strip()
-            return str(response).strip()
+        def _run_async_invoke() -> str:
+            coro = llm.ainvoke(messages)
+            res = asyncio.run(asyncio.wait_for(coro, timeout=timeout))
+            if hasattr(res, "content"):
+                return str(res.content).strip()
+            return str(res).strip()
 
-        # Caso 1: LangChain o cliente con .invoke() síncrono con timeout estricto
-        if hasattr(llm, "invoke"):
-            future = _LLM_EXECUTOR.submit(_run_sync_invoke)
+        future = _LLM_EXECUTOR.submit(_run_async_invoke)
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError as exc:
+            logger.error("Timeout (%ss) al invocar LLM asíncrono.", timeout)
+            raise TimeoutError(
+                f"Timeout ({timeout}s) agotado durante la inferencia con LLM."
+            ) from exc
+        except Exception as exc:
+            logger.error("Error al invocar LLM asíncrono (%s): %s", type(exc).__name__, exc)
+            raise
+
+    if callable(llm):
+
+        def _run_callable() -> str:
             try:
-                return future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                logger.warning(
-                    "Timeout (%ss) al invocar LLM síncrono. Conmutando a fallback.",
-                    timeout,
-                )
-                return None
+                return str(llm(system_prompt=system_prompt, user_prompt=user_prompt)).strip()
+            except TypeError:
+                return str(llm(user_prompt)).strip()
 
-        # Caso 2: Cliente con .ainvoke() asíncrono
-        if hasattr(llm, "ainvoke"):
+        future = _LLM_EXECUTOR.submit(_run_callable)
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError as exc:
+            logger.error("Timeout (%ss) en función LLM callable.", timeout)
+            raise TimeoutError(f"Timeout ({timeout}s) agotado en función LLM callable.") from exc
+        except Exception as exc:
+            logger.error("Error en función LLM callable (%s): %s", type(exc).__name__, exc)
+            raise
 
-            def _run_async_invoke() -> str:
-                coro = llm.ainvoke(messages)
-                res = asyncio.run(asyncio.wait_for(coro, timeout=timeout))
-                if hasattr(res, "content"):
-                    return str(res.content).strip()
-                return str(res).strip()
-
-            future = _LLM_EXECUTOR.submit(_run_async_invoke)
-            try:
-                return future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                logger.warning(
-                    "Timeout (%ss) al invocar LLM asíncrono. Conmutando a fallback.",
-                    timeout,
-                )
-                return None
-
-        # Caso 3: Callable simple
-        if callable(llm):
-
-            def _run_callable() -> str:
-                try:
-                    return str(llm(system_prompt=system_prompt, user_prompt=user_prompt)).strip()
-                except TypeError:
-                    return str(llm(user_prompt)).strip()
-
-            future = _LLM_EXECUTOR.submit(_run_callable)
-            try:
-                return future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                logger.warning(
-                    "Timeout (%ss) en función LLM callable. Conmutando a fallback.",
-                    timeout,
-                )
-                return None
-
-    except Exception as e:
-        logger.warning(
-            "Fallo al invocar LLM cinematográfico (%s): %s. Conmutando a fallback.",
-            type(e).__name__,
-            e,
-        )
-        return None
-
-    return None
+    raise RuntimeError(f"El objeto LLM suministrado ({type(llm).__name__}) no es invocable.")

@@ -9,7 +9,7 @@ Soporta inferencia semántica de tensión dramática mediante LLM o fallback heu
 import re
 from typing import Any
 
-from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
+from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text, is_mock_mode
 
 BREAKDOWN_SYSTEM_PROMPT = """Eres un Director de Fotografía y Script supervisor cinematográfico profesional.
 Tu misión es analizar el guión literario de una escena y proponer una cobertura técnica de cámara (desglose de planos) que maximice la tensión dramática y la narrativa visual.
@@ -133,50 +133,55 @@ def breakdown_screenplay_to_shots(
     if active_llm is not None:
         user_prompt = f"GUIÓN LITERARIO DE LA ESCENA A DESGLOSAR:\n{text}"
         llm_output = invoke_llm_text(active_llm, BREAKDOWN_SYSTEM_PROMPT, user_prompt)
-        if llm_output and llm_output.strip():
-            parsed_shots = parse_shots_from_annotated_text(llm_output)
-            if parsed_shots:
-                return llm_output.strip(), parsed_shots
+        if not llm_output or not llm_output.strip():
+            raise RuntimeError("El modelo LLM retornó una respuesta vacía en desglose técnico.")
+        parsed_shots = parse_shots_from_annotated_text(llm_output)
+        if not parsed_shots:
+            raise RuntimeError("No se pudieron parsear planos técnicos desde la salida del LLM.")
+        return llm_output.strip(), parsed_shots
 
-    # --- FALLBACK DETERMINISTA HEURÍSTICO (Modo Test / Offline / Cero Tokens) ---
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    if is_mock_mode():
+        # --- MODO MOCK / TESTING DETERMINISTA ---
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
 
-    shots: list[dict[str, Any]] = []
-    output_lines: list[str] = []
-    shot_count = 0
+        shots: list[dict[str, Any]] = []
+        output_lines: list[str] = []
+        shot_count = 0
 
-    for p in paragraphs:
-        if p.startswith(("INT.", "EXT.", "INT/EXT.")):
+        for p in paragraphs:
+            if p.startswith(("INT.", "EXT.", "INT/EXT.")):
+                output_lines.append(p)
+                continue
+
+            shot_count += 1
+            shot_type = detect_shot_type(p)
+            header = f"--- shot {shot_count} ({shot_type}) ---"
+
+            output_lines.append(header)
             output_lines.append(p)
-            continue
 
-        shot_count += 1
-        shot_type = detect_shot_type(p)
-        header = f"--- shot {shot_count} ({shot_type}) ---"
+            shots.append(
+                {
+                    "shot_number": shot_count,
+                    "shot_type": shot_type,
+                    "description": p,
+                }
+            )
 
-        output_lines.append(header)
-        output_lines.append(p)
+        if not shots and paragraphs:
+            shot_count = 1
+            header = "--- shot 1 (PG) ---"
+            desc = " ".join(paragraphs)
+            output_lines = [header, desc]
+            shots.append(
+                {
+                    "shot_number": 1,
+                    "shot_type": "PG",
+                    "description": desc,
+                }
+            )
 
-        shots.append(
-            {
-                "shot_number": shot_count,
-                "shot_type": shot_type,
-                "description": p,
-            }
-        )
+        annotated_output = "\n\n".join(output_lines)
+        return annotated_output, shots
 
-    if not shots and paragraphs:
-        shot_count = 1
-        header = "--- shot 1 (PG) ---"
-        desc = " ".join(paragraphs)
-        output_lines = [header, desc]
-        shots.append(
-            {
-                "shot_number": 1,
-                "shot_type": "PG",
-                "description": desc,
-            }
-        )
-
-    annotated_output = "\n\n".join(output_lines)
-    return annotated_output, shots
+    raise RuntimeError("No hay cliente LLM disponible ni entorno mock habilitado.")

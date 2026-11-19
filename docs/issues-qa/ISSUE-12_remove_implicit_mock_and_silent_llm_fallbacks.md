@@ -24,5 +24,5 @@
   2. Eliminar los motores heurísticos de fallback en `structuring.py`, `formatting.py`, `breakdown.py`, `plot_holes.py`, `characters.py` y el retorno de `DUMMY_PNG_BASE64` con `success=True` cuando falta `api_key` en `storyboard.py:160-173`, devolviendo `ToolResult(success=False, error=...)`.
   3. Actualizar `tests/test_llm_resilience_and_mock.py` para exigir comportamiento *Fail-Loud* (`success=False`) cuando el LLM falla.
 - **Criterios de Aceptación (Checklist verificable):**
-  - [ ] Ante un timeout o excepción del LLM en cualquiera de las 7 herramientas de `jg_plugin_filmmaker`, la herramienta retorna `ToolResult(success=False, error=...)`.
-  - [ ] Si falta `GOOGLE_AI_API_KEY` en modo real, `generate_storyboard` retorna `ToolResult(success=False)` y nunca `DUMMY_PNG_BASE64`.
+  - [x] Ante un timeout o excepción del LLM en cualquiera de las 7 herramientas de `jg_plugin_filmmaker`, la herramienta retorna `ToolResult(success=False, error=...)`.
+  - [x] Si falta `GOOGLE_AI_API_KEY` en modo real, `generate_storyboard` retorna `ToolResult(success=False)` y nunca `DUMMY_PNG_BASE64`.

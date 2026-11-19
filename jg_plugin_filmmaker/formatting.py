@@ -17,7 +17,7 @@ from jg_plugin_filmmaker.dialogue_refiner import (
     process_indirect_dialogue,
     refine_dialogue_to_direct_speech,
 )
-from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
+from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text, is_mock_mode
 from jg_plugin_filmmaker.structuring import apply_user_locks
 
 SCREENPLAY_SYSTEM_PROMPT = """Eres un guionista cinematográfico profesional especializado en formato estándar de guión (Fountain / Final Draft estándar de la industria).
@@ -59,7 +59,7 @@ def _format_with_llm(
     text: str,
     slugline: str,
     user_locks: dict[str, Any] | None,
-) -> str | None:
+) -> str:
     """Invoca al LLM para generar el guion Fountain formal."""
     locks_desc = "Ningún término fijado."
     if user_locks and isinstance(user_locks, dict):
@@ -72,9 +72,9 @@ def _format_with_llm(
     sys_prompt = SCREENPLAY_SYSTEM_PROMPT.format(slugline=slugline, pinned_terms_context=locks_desc)
     user_prompt = f"TRATAMIENTO A CONVERTIR EN GUIÓN:\n{text}"
     llm_output = invoke_llm_text(active_llm, sys_prompt, user_prompt)
-    if llm_output and llm_output.strip():
-        return apply_user_locks(llm_output.strip(), user_locks, stage="screenplay")
-    return None
+    if not llm_output or not llm_output.strip():
+        raise RuntimeError("El modelo LLM retornó una respuesta vacía en formateo de guión.")
+    return apply_user_locks(llm_output.strip(), user_locks, stage="screenplay")
 
 
 def _process_paragraph(
@@ -206,11 +206,13 @@ def format_screenplay(
     active_llm = get_active_llm(llm_client)
     if active_llm is not None:
         llm_out = _format_with_llm(active_llm, text, slugline, user_locks)
-        if llm_out is not None:
-            return (llm_out, {"source": "agent", "degraded": False}) if return_meta else llm_out
+        return (llm_out, {"source": "agent", "degraded": False}) if return_meta else llm_out
 
-    out = _heuristic_format_screenplay(text, slugline, characters_context, user_locks)
-    return (out, {"source": "heuristic_fallback", "degraded": True}) if return_meta else out
+    if is_mock_mode():
+        out = _heuristic_format_screenplay(text, slugline, characters_context, user_locks)
+        return (out, {"source": "heuristic_fallback", "degraded": True}) if return_meta else out
+
+    raise RuntimeError("No hay cliente LLM disponible ni entorno mock habilitado.")
 
 
 __all__ = ["format_screenplay", "refine_dialogue_to_direct_speech"]

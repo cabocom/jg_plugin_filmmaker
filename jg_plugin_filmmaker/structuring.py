@@ -9,7 +9,7 @@ Soporta inferencia semántica con LLM o fallback determinista para testing y CI.
 import re
 from typing import Any, Literal, overload
 
-from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text
+from jg_plugin_filmmaker.llm import get_active_llm, invoke_llm_text, is_mock_mode
 
 STRUCTURING_SYSTEM_PROMPT = """Eres un consultor y analista cinematográfico profesional.
 Tu misión es transformar notas dispersas, ideas en bruto o borradores de un autor en un TRATAMIENTO CINEMATOGRÁFICO NARRATIVO formal.
@@ -208,34 +208,37 @@ def structure_treatment(
         user_prompt = f"NOTAS / TEXTO BRUTO DEL AUTOR:\n{text}"
 
         llm_output = invoke_llm_text(active_llm, sys_prompt, user_prompt)
-        if llm_output and llm_output.strip():
-            # Limpiar cualquier posible residuo de prefijo accidental
-            clean_output = re.sub(r"^En [^:]+:\s*", "", llm_output.strip(), flags=re.IGNORECASE)
-            # Aplicar estrictamente candados de usuario sobre la salida del LLM
-            out = apply_user_locks(clean_output, user_locks, stage="structured")
-            meta = {"source": "agent", "degraded": False}
-            return (out, meta) if return_meta else out
+        if not llm_output or not llm_output.strip():
+            raise RuntimeError("El modelo LLM retornó una respuesta vacía en estructuración.")
+        # Limpiar cualquier posible residuo de prefijo accidental
+        clean_output = re.sub(r"^En [^:]+:\s*", "", llm_output.strip(), flags=re.IGNORECASE)
+        # Aplicar estrictamente candados de usuario sobre la salida del LLM
+        out = apply_user_locks(clean_output, user_locks, stage="structured")
+        meta = {"source": "agent", "degraded": False}
+        return (out, meta) if return_meta else out
 
-    # --- FALLBACK DETERMINISTA HEURÍSTICO (Modo Test / Offline / Cero Tokens) ---
-    paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
-    structured_paragraphs: list[str] = []
+    if is_mock_mode():
+        paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
+        structured_paragraphs: list[str] = []
 
-    for p in paragraphs:
-        # Purgar cualquier residuo de 'En LOCALIZACIÓN:' que venga arrastrado
-        p_clean = re.sub(r"^En [^:]+:\s*", "", p, flags=re.IGNORECASE).strip()
-        p_clean = re.sub(r"\s+", " ", p_clean)
+        for p in paragraphs:
+            # Purgar cualquier residuo de 'En LOCALIZACIÓN:' que venga arrastrado
+            p_clean = re.sub(r"^En [^:]+:\s*", "", p, flags=re.IGNORECASE).strip()
+            p_clean = re.sub(r"\s+", " ", p_clean)
 
-        if characters_context and isinstance(characters_context, list):
-            for char in characters_context:
-                if isinstance(char, dict) and "name" in char:
-                    cname = char["name"].strip()
-                    pattern = rf"\b{re.escape(cname)}\b"
-                    p_clean = re.sub(pattern, cname, p_clean, flags=re.IGNORECASE)
+            if characters_context and isinstance(characters_context, list):
+                for char in characters_context:
+                    if isinstance(char, dict) and "name" in char:
+                        cname = char["name"].strip()
+                        pattern = rf"\b{re.escape(cname)}\b"
+                        p_clean = re.sub(pattern, cname, p_clean, flags=re.IGNORECASE)
 
-        if p_clean:
-            structured_paragraphs.append(p_clean)
+            if p_clean:
+                structured_paragraphs.append(p_clean)
 
-    structured_text = "\n\n".join(structured_paragraphs)
-    out = apply_user_locks(structured_text, user_locks, stage="structured")
-    meta = {"source": "heuristic_fallback", "degraded": True}
-    return (out, meta) if return_meta else out
+        structured_text = "\n\n".join(structured_paragraphs)
+        out = apply_user_locks(structured_text, user_locks, stage="structured")
+        meta = {"source": "heuristic_fallback", "degraded": True}
+        return (out, meta) if return_meta else out
+
+    raise RuntimeError("No hay cliente LLM disponible ni entorno mock habilitado.")
