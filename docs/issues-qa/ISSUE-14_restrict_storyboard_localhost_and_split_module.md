@@ -17,4 +17,4 @@
   1. Restringir la excepción de `http://localhost` / `127.0.0.1` en `storyboard.py:182-186` exclusivamente a cuando `is_mock_mode()` o entorno de test esté activo.
   2. Extraer la construcción del prompt visual y la validación/decodificación MIME (`detect_image_mime`, capturando `(binascii.Error, ValueError)`) a un submódulo auxiliar para dejar `storyboard.py` por debajo de 300 líneas y `generate_storyboard_image` por debajo de 40 líneas.
 - **Criterios de Aceptación (Checklist verificable):**
-  - [ ] Ningún archivo en `jg_plugin_filmmaker/jg_plugin_filmmaker/` supera las 300 líneas.
+  - [x] Ningún archivo en `jg_plugin_filmmaker/jg_plugin_filmmaker/` supera las 300 líneas.

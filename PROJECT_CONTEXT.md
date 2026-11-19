@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.12.0  
+**Versión:** 2.13.0  
 **Fecha:** 19 de noviembre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Httpx, Pytest, Ruff  
-**Estado:** Conexión de Parámetros BYOK y Prevención de Saturación de Workers en Inferencia LLM (ISSUE-13 / jg_plugin_filmmaker#3). Los parámetros BYOK `api_key` y `provider` se extraen y propagan desde `execute_treatment_structuring` y `execute_screenplay_formatter` hacia `structure_treatment` y `format_screenplay`, resolviéndose en `get_active_llm`. Se eliminó la rama muerta de `ainvoke` en `llm.py` y se configuró proactivamente el timeout a nivel de cliente HTTP (`_configure_client_timeout`) para evitar el bloqueo o agotamiento de los hilos de `_LLM_EXECUTOR`. Suite completa de 77 tests pasando al 100% con Ruff limpio y formato verificado.
+**Estado:** Modularización de Storyboard y Endurecimiento de Seguridad URL (ISSUE-14 / jg_plugin_filmmaker#4). Se extrajo la construcción de prompts aumentados y detección MIME segura con captura explícita de `(binascii.Error, ValueError)` a `storyboard_prompt.py`. `storyboard.py` quedó reducido a 262 LOC y `generate_storyboard_image` a 39 LOC (<40 LOC), logrando que el 100% de los ficheros del plugin cumplan estrictamente el límite de <300 LOC. Se restringió el uso de esquemas `http://` y hosts loopback (`127.0.0.1`, `localhost`) exclusivamente a entornos de test/mock, bloqueándolos en producción. Suite completa de 78 tests pasando al 100% con Ruff y formato verificados.
 
 ---
 

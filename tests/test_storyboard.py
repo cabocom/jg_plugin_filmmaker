@@ -172,3 +172,21 @@ def test_generate_storyboard_rejects_untrusted_base_url(monkeypatch: pytest.Monk
     assert result.success is False
     assert result.metadata["error_code"] == "UNTRUSTED_BASE_URL"
     assert "no permitida" in result.error
+
+
+def test_generate_storyboard_rejects_localhost_in_real_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Valida que en entorno real (no mock/test) se rechacen URLs localhost y HTTP."""
+    monkeypatch.setenv("JG_AGENTE_MOCK", "false")
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("GOOGLE_AI_BASE_URL", "http://127.0.0.1:8000/v1beta")
+
+    result = generate_storyboard_image(
+        prompt="Test prompt",
+        api_key_override="secret_key",
+    )
+
+    assert result.success is False
+    assert result.metadata["error_code"] == "UNTRUSTED_BASE_URL"
+    assert "no permitida" in result.error
