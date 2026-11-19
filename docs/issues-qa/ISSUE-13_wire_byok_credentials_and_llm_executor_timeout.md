@@ -19,4 +19,4 @@
   1. En `execute_treatment_structuring` y `execute_screenplay_formatter` (`handlers/script_tools.py`), extraer `api_key` y `provider` y pasarlos a `structure_treatment()` / `format_screenplay()` -> `invoke_llm_text()` para instanciar o invocar el cliente LLM con las credenciales BYOK suministradas.
   2. En `llm.py:125-173`, eliminar la rama muerta `if hasattr(llm, "ainvoke"):` (`:137-155`), unificar la ejecución en un único helper con timeout de socket HTTP configurado en el cliente subyacente (`timeout=timeout`) para que los workers de `_LLM_EXECUTOR` no queden bloqueados indefinidamente.
 - **Criterios de Aceptación (Checklist verificable):**
-  - [ ] Test unitario verificando que `api_key` y `provider` pasados a `treatment_structuring` y `screenplay_formatter` se utilizan efectivamente en la llamada al proveedor LLM.
+  - [x] Test unitario verificando que `api_key` y `provider` pasados a `treatment_structuring` y `screenplay_formatter` se utilizan efectivamente en la llamada al proveedor LLM.

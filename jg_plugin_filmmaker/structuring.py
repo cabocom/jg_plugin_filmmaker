@@ -112,6 +112,8 @@ def structure_treatment(
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
     llm_client: Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     return_meta: Literal[False] = False,
 ) -> str: ...
 
@@ -123,6 +125,8 @@ def structure_treatment(
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
     llm_client: Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     return_meta: Literal[True] = ...,
 ) -> tuple[str, dict[str, Any]]: ...
 
@@ -134,6 +138,8 @@ def structure_treatment(
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
     llm_client: Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     return_meta: bool = ...,
 ) -> str | tuple[str, dict[str, Any]]: ...
 
@@ -144,6 +150,8 @@ def structure_treatment(
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
     llm_client: Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     return_meta: bool = False,
 ) -> str | tuple[str, dict[str, Any]]:
     """Normaliza texto bruto a tratamiento dramático en presente continuo/indicativo."""
@@ -153,7 +161,7 @@ def structure_treatment(
     text = raw_text.strip()
 
     # Intentar inferencia semántica con LLM si está disponible y activo
-    active_llm = get_active_llm(llm_client)
+    active_llm = get_active_llm(llm_client, api_key=api_key, provider=provider)
     if active_llm is not None:
         chars_desc = "Sin personajes específicos definidos."
         if characters_context and isinstance(characters_context, list):

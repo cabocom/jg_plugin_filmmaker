@@ -1,10 +1,10 @@
 # Contexto de Proyecto: jg_plugin_filmmaker
 
-**Versión:** 2.11.0  
+**Versión:** 2.12.0  
 **Fecha:** 19 de noviembre de 2026  
 **Componente:** Plugin Satélite Cognitivo de Asistencia Cinematográfica para `jg_agente`  
 **Stack Tecnológico:** Python 3.12 / 3.14, Pydantic v2, `jg-agente-sdk` (^1.0.0), Httpx, Pytest, Ruff  
-**Estado:** Endurecimiento Anti-Fallback y Fail-Loud en Inferencia LLM (ISSUE-12 / jg_plugin_filmmaker#2). Se eliminó la activación implícita de `is_mock_mode()` por ausencia de API keys. `invoke_llm_text()` propaga excepciones estrictas (`RuntimeError`, `TimeoutError`) ante caídas o timeouts de inferencia. Las 7 herramientas cognitivas del plugin fallan ruidosamente devolviendo `ToolResult(success=False, error=...)` ante fallos de LLM o falta de credenciales en modo real, erradicando fallbacks heurísticos silenciosos y el uso de imágenes PNG sintéticas en producción. Suite completa de 75 tests pasando al 100% y ruff limpio.
+**Estado:** Conexión de Parámetros BYOK y Prevención de Saturación de Workers en Inferencia LLM (ISSUE-13 / jg_plugin_filmmaker#3). Los parámetros BYOK `api_key` y `provider` se extraen y propagan desde `execute_treatment_structuring` y `execute_screenplay_formatter` hacia `structure_treatment` y `format_screenplay`, resolviéndose en `get_active_llm`. Se eliminó la rama muerta de `ainvoke` en `llm.py` y se configuró proactivamente el timeout a nivel de cliente HTTP (`_configure_client_timeout`) para evitar el bloqueo o agotamiento de los hilos de `_LLM_EXECUTOR`. Suite completa de 77 tests pasando al 100% con Ruff limpio y formato verificado.
 
 ---
 

@@ -29,25 +29,41 @@ def _count_applied_locks(locks_data: dict[str, Any] | None) -> int:
     )
 
 
+def _extract_contexts(
+    characters_context: list[CharacterContext | dict[str, Any]] | None,
+    location_context: LocationContext | dict[str, Any] | None,
+    user_locks: UserLocksModel | dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    """Extrae diccionarios nativos desde modelos Pydantic o dicts de contexto."""
+    chars = [
+        c.model_dump() if isinstance(c, BaseModel) else c for c in (characters_context or [])
+    ] or None
+    loc = (
+        location_context.model_dump()
+        if isinstance(location_context, BaseModel)
+        else location_context
+    )
+    locks = user_locks.model_dump() if isinstance(user_locks, BaseModel) else user_locks
+    return chars, loc, locks
+
+
 def execute_treatment_structuring(
     raw_text: str,
     characters_context: list[CharacterContext | dict[str, Any]] | None = None,
     location_context: LocationContext | dict[str, Any] | None = None,
     user_locks: UserLocksModel | dict[str, Any] | None = None,
     llm_client: LLMClientProtocol | Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     **kwargs: Any,
 ) -> ToolResult:
-    """Ejecuta la estructuración del tratamiento respetando los candados del usuario."""
+    """Ejecuta la estructuración del tratamiento respetando los candados del usuario y BYOK."""
     try:
-        chars_data = [
-            c.model_dump() if isinstance(c, BaseModel) else c for c in (characters_context or [])
-        ] or None
-        loc_data = (
-            location_context.model_dump()
-            if isinstance(location_context, BaseModel)
-            else location_context
+        chars_data, loc_data, locks_data = _extract_contexts(
+            characters_context, location_context, user_locks
         )
-        locks_data = user_locks.model_dump() if isinstance(user_locks, BaseModel) else user_locks
+        resolved_key = api_key or kwargs.get("api_key")
+        resolved_prov = provider or kwargs.get("provider")
 
         structured_output, step_meta = structure_treatment(
             raw_text=raw_text,
@@ -55,6 +71,8 @@ def execute_treatment_structuring(
             location_context=loc_data,
             user_locks=locks_data,
             llm_client=llm_client,
+            api_key=resolved_key,
+            provider=resolved_prov,
             return_meta=True,
         )
 
@@ -84,19 +102,17 @@ def execute_screenplay_formatter(
     location_context: LocationContext | dict[str, Any] | None = None,
     user_locks: UserLocksModel | dict[str, Any] | None = None,
     llm_client: LLMClientProtocol | Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     **kwargs: Any,
 ) -> ToolResult:
-    """Ejecuta la conversión a guión literario Fountain respetando user_locks."""
+    """Ejecuta la conversión a guión literario Fountain respetando user_locks y BYOK."""
     try:
-        chars_data = [
-            c.model_dump() if isinstance(c, BaseModel) else c for c in (characters_context or [])
-        ] or None
-        loc_data = (
-            location_context.model_dump()
-            if isinstance(location_context, BaseModel)
-            else location_context
+        chars_data, loc_data, locks_data = _extract_contexts(
+            characters_context, location_context, user_locks
         )
-        locks_data = user_locks.model_dump() if isinstance(user_locks, BaseModel) else user_locks
+        resolved_key = api_key or kwargs.get("api_key")
+        resolved_prov = provider or kwargs.get("provider")
 
         screenplay_output, step_meta = format_screenplay(
             structured_text=structured_text,
@@ -104,6 +120,8 @@ def execute_screenplay_formatter(
             location_context=loc_data,
             user_locks=locks_data,
             llm_client=llm_client,
+            api_key=resolved_key,
+            provider=resolved_prov,
             return_meta=True,
         )
 

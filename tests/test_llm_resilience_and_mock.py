@@ -157,15 +157,15 @@ def test_invoke_llm_text_variants() -> None:
     res = invoke_llm_text(dummy_callable, "sys", "acción rápida")
     assert res == "Echo: acción rápida"
 
-    # 3. LLM con ainvoke asíncrono
-    class AsyncLlm:
-        async def ainvoke(self, _messages: object) -> MagicMock:
+    # 3. LLM estándar con .invoke()
+    class SyncInvokeLlm:
+        def invoke(self, _messages: object) -> MagicMock:
             mock_res = MagicMock()
-            mock_res.content = "Respuesta asíncrona"
+            mock_res.content = "Respuesta síncrona invoke"
             return mock_res
 
-    res_async = invoke_llm_text(AsyncLlm(), "sys", "user")
-    assert res_async == "Respuesta asíncrona"
+    res_sync = invoke_llm_text(SyncInvokeLlm(), "sys", "user")
+    assert res_sync == "Respuesta síncrona invoke"
 
     # 4. LLM que lanza excepción no controlada -> propaga fail-loud
     class FaultyLlm:
@@ -235,3 +235,71 @@ def test_generate_storyboard_fail_loud_in_real_mode_without_api_key(
     assert res.success is False
     assert res.metadata.get("error_code") == "MISSING_API_KEY"
     assert "image_base64" not in res.metadata
+
+
+def test_treatment_structuring_and_formatter_wire_byok_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Valida que api_key y provider suministrados a las herramientas BYOK se propagan al LLM."""
+    captured_calls: list[dict[str, object]] = []
+
+    class DummyByokLlm:
+        def __init__(self, key: str, prov: str) -> None:
+            self.key = key
+            self.prov = prov
+
+        def invoke(self, _messages: object) -> MagicMock:
+            mock_res = MagicMock()
+            mock_res.content = f"Procesado con {self.prov} y {self.key}"
+            return mock_res
+
+    def mock_get_active_llm(
+        override_llm: object = None,
+        api_key: object = None,
+        provider: str | None = None,
+    ) -> DummyByokLlm:
+        key_str = (
+            api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else str(api_key)
+        )
+        prov_str = str(provider)
+        captured_calls.append({"api_key": key_str, "provider": prov_str})
+        return DummyByokLlm(key=key_str, prov=prov_str)
+
+    monkeypatch.setattr("jg_plugin_filmmaker.structuring.get_active_llm", mock_get_active_llm)
+    monkeypatch.setattr("jg_plugin_filmmaker.formatting.get_active_llm", mock_get_active_llm)
+
+    # 1. execute_treatment_structuring
+    r1 = execute_treatment_structuring(
+        raw_text="Notas iniciales",
+        api_key="sk-byok-test-key-1",
+        provider="groq",
+    )
+    assert r1.success is True
+    assert "Procesado con groq y sk-byok-test-key-1" in r1.output
+    assert captured_calls[0] == {"api_key": "sk-byok-test-key-1", "provider": "groq"}
+
+    # 2. execute_screenplay_formatter
+    r2 = execute_screenplay_formatter(
+        structured_text="Lucas camina hacia la barra.",
+        api_key="sk-byok-test-key-2",
+        provider="openai",
+    )
+    assert r2.success is True
+    assert "Procesado con openai y sk-byok-test-key-2" in r2.output
+    assert captured_calls[1] == {"api_key": "sk-byok-test-key-2", "provider": "openai"}
+
+
+def test_configure_client_timeout_prevents_worker_saturation() -> None:
+    """Valida que _configure_client_timeout actualice los timeouts del cliente subyacente."""
+    from jg_plugin_filmmaker.llm import _configure_client_timeout
+
+    class MockHttpClientWithTimeout:
+        def __init__(self) -> None:
+            self.timeout = 120.0
+            self.request_timeout = 120.0
+
+    client = MockHttpClientWithTimeout()
+    _configure_client_timeout(client, 15.0)
+
+    assert client.timeout == 15.0
+    assert client.request_timeout == 15.0

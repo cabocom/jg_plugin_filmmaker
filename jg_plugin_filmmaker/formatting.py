@@ -173,6 +173,8 @@ def format_screenplay(
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
     llm_client: Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     return_meta: Literal[False] = False,
 ) -> str: ...
 
@@ -184,6 +186,8 @@ def format_screenplay(
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
     llm_client: Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     return_meta: Literal[True] = True,
 ) -> tuple[str, dict[str, Any]]: ...
 
@@ -194,6 +198,8 @@ def format_screenplay(
     location_context: dict[str, Any] | None = None,
     user_locks: dict[str, Any] | None = None,
     llm_client: Any = None,
+    api_key: Any | None = None,
+    provider: str | None = None,
     return_meta: bool = False,
 ) -> str | tuple[str, dict[str, Any]]:
     """Convierte tratamiento estructurado en guión literario en formato Fountain."""
@@ -203,7 +209,7 @@ def format_screenplay(
     text = structured_text.strip()
     slugline = _build_slugline(location_context)
 
-    active_llm = get_active_llm(llm_client)
+    active_llm = get_active_llm(llm_client, api_key=api_key, provider=provider)
     if active_llm is not None:
         llm_out = _format_with_llm(active_llm, text, slugline, user_locks)
         return (llm_out, {"source": "agent", "degraded": False}) if return_meta else llm_out
